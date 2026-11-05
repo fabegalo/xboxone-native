@@ -12,10 +12,19 @@ add_executable(xboxone-systemos ${PROJECT_SOURCE_DIR}/src/bootstrap_main.cpp)
 target_link_libraries(xboxone-systemos PRIVATE xboxone_systemos)
 
 if(XBOXONE_NATIVE_BUILD_TESTS)
+    if(DEFINED ENV{GITHUB_ACTIONS} AND NOT Python3_Interpreter_FOUND)
+        message(FATAL_ERROR "CI requires Python regression coverage")
+    endif()
     add_executable(xboxone_bootstrap_tests ${PROJECT_SOURCE_DIR}/tests/bootstrap_tests.cpp)
     target_link_libraries(xboxone_bootstrap_tests PRIVATE xboxone_systemos)
     add_test(NAME bootstrap_regressions COMMAND xboxone_bootstrap_tests)
     set_tests_properties(bootstrap_regressions PROPERTIES TIMEOUT 20)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME pe_dependency_regressions
+            COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/pe_dependency_tests.py"
+                    $<TARGET_FILE:xboxone-native> $<TARGET_FILE:xboxone-systemos>)
+        set_tests_properties(pe_dependency_regressions PROPERTIES TIMEOUT 30)
+    endif()
     if(WIN32 AND MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
        CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
         foreach(variant IN ITEMS ok hang fail)

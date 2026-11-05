@@ -49,25 +49,8 @@ void print_report(const xboxone::inspection::Report& report, bool json) {
                       << ",\"created_filetime_raw\":" << x.created_filetime_raw
                       << ",\"signature_verified\":false,\"decrypted\":false";
         } else {
-            const auto& p = report.pe;
-            std::cout << ",\"machine\":" << p.machine << ",\"subsystem\":" << p.subsystem
-                      << ",\"section_count\":" << p.sections
-                      << ",\"entry_point_rva\":" << p.entry_point_rva
-                      << ",\"image_base\":" << p.image_base << ",\"imports\":[";
-            bool first = true;
-            for (const auto& library : p.imports) {
-                if (!first) std::cout << ',';
-                first = false;
-                std::cout << "{\"library\":\"" << escape_json(library.library) << "\",\"symbols\":[";
-                bool first_symbol = true;
-                for (const auto& symbol : library.functions) {
-                    if (!first_symbol) std::cout << ',';
-                    first_symbol = false;
-                    std::cout << '"' << escape_json(symbol) << '"';
-                }
-                std::cout << "]}";
-            }
-            std::cout << "]";
+            std::cout << ',';
+            xboxone::inspection::write_pe_json_fields(std::cout, report.pe);
         }
         std::cout << "}\n";
         return;

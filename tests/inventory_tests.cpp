@@ -3,6 +3,7 @@
 #include "sha256.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -119,14 +120,28 @@ int main() {
         check(!xboxone::inventory::scan(root / "escape", report, error), "reject symlink root");
         check(!xboxone::inventory::scan(root / "escape" / "..", report, error), "reject symlink ancestor before dot-dot normalization");
         check(!xboxone::inventory::scan(root / "escape" / ".." / "escape", report, error), "reject normalized symlink root");
+        const auto previous = fs::current_path();
+        fs::current_path(root);
+        check(!xboxone::inventory::scan("escape/..", report, error) && error.find("symlink") != std::string::npos,
+              "reject relative symlink before dot-dot normalization");
+        fs::current_path(previous);
+        std::string digest;
+        check(!xboxone::inventory::fingerprint(root / "escape" / ".." / "z.exe", digest, error) && error.find("linked") != std::string::npos,
+              "fingerprint rejects symlink ancestor before dot-dot normalization");
         fs::remove(root / "escape");
-    } else { std::cout << "SKIP: directory symlink unavailable: " << ec.message() << '\n'; }
+    } else {
+        check(!std::getenv("XBOXONE_REQUIRE_SYMLINKS"), "CI requires directory symlink coverage: " + ec.message());
+        std::cout << "Directory symlink unavailable: " << ec.message() << '\n';
+    }
     fs::create_symlink(temp / "outside" / "escape.exe", root / "linked.exe", ec);
     if (!ec) {
         check(xboxone::inventory::scan(root, report, error) && report.files.size() == 2 && report.excluded.size() == 1,
               "file symlink excluded");
         fs::remove(root / "linked.exe");
-    } else { std::cout << "SKIP: file symlink unavailable: " << ec.message() << '\n'; }
+    } else {
+        check(!std::getenv("XBOXONE_REQUIRE_SYMLINKS"), "CI requires file symlink coverage: " + ec.message());
+        std::cout << "File symlink unavailable: " << ec.message() << '\n';
+    }
 #ifndef _WIN32
     write(root / "Z.exe", source);
     // Case-sensitive filesystems can represent this collision. Other hosts

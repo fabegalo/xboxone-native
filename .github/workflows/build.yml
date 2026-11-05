@@ -19,4 +19,6 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel 2
       - name: Test
+        env:
+          XBOXONE_REQUIRE_SYMLINKS: '1'
         run: ctest --test-dir build -C Release --output-on-failure

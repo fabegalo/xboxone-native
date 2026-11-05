@@ -1,6 +1,8 @@
 # Próxima tarefa — M1: ativação de um componente original legível
 
-Estado em **2026-11-04**: M0 publicado em `7307692`; sessão versionada, resolvedor explícito e execução Win32 x64 supervisionada foram demonstrados com código sintético próprio em [M1-STATUS.md](M1-STATUS.md). Os OSUs e a dashboard original continuam sem execução. O bootstrap não exige nem substitui o renderer paralelo.
+Estado em **2026-11-05**: M1.1 entrega inspeção de imports normais/atrasados, exports/forwarders, API Sets e recursos de ativação disponíveis, integrada ao JSON determinístico de `xboxone-systemos prepare`. A identidade e a revisão de cada provedor precisam ser verificadas; presença de export não autoriza sua execução. Oito grupos afetados passaram no Windows; CI dos três sistemas aguardando execução do commit M1.1. Evidência e limites em [M1-STATUS.md](M1-STATUS.md).
+
+Os arquivos do OSU2 continuam expondo somente contêineres XVD, sem componente original diretamente legível. Nenhum boot, ativação original ou frame autêntico demonstrado. O próximo trabalho depende desse insumo; não repetir infraestrutura sintética aprovada nem pesquisas de criptografia já concluídas.
 
 ## Objetivo concreto
 
@@ -17,7 +19,7 @@ Identificar **um componente original do Xbox One já legível por acesso autoriz
 
 1. Executar `inventory <raiz-do-conjunto> --json` e preencher o manifesto v1 de [M1-STATUS.md](M1-STATUS.md): revisão exata, identidade de fonte, origem declarada, caminho/hash/procedência por arquivo e bindings explicitamente auditados. Referenciar os originais no lugar, sem cópias; o manifesto não autentica a revisão declarada.
 2. Identificar o shell e seu modelo de pacote/ativação a partir dos arquivos efetivamente encontrados, sem presumir nomes de executável ou a geração visual da dashboard.
-3. Mapear imports normais e atrasados, exports/forwarders, contratos de API, classes WinRT, serviços NT, assets, recursos de idioma, composição e comunicação com HostOS. O parser atual de imports não certifica esses contratos completos.
+3. Aplicar o grafo PE já implementado ao conjunto legível. Auditar o mapeamento exato de API Sets da revisão e interpretar seus metadados reais de pacote/WinRT/SxS. O parser preserva RT_MANIFEST/RT_VERSION e marca CLR/TLS; não resolve classes WinRT, schemas API Set, manifestos externos, serviços, assets ou comunicação com HostOS automaticamente.
 4. Usar `xboxone-systemos prepare <manifesto>` para registrar dependências ausentes ou não implementadas. O backend atual aceita só EXE Win32 console com kernel32 auditado; imports privados/atrasados, WinRT, serviços, kernel NT e dispositivos exigem trabalho específico. Não escolher outro arquivo/OSU por basename.
 5. Estender somente o contrato observado, com teste próprio. Quando kernel/dispositivo for indispensável, registrar símbolo/serviço/IOCTL e avaliar backend isolado. Só executar `run` após auditoria de ativação e dependências; saída 0 sozinha não prova inicialização original.
 

@@ -25,7 +25,7 @@ bool has(const Session& s, std::string_view code) {
                        [&](const auto& d) { return d.code == code; });
 }
 struct Temporary {
-    fs::path root = fs::temp_directory_path() /
+    fs::path root = fs::canonical(fs::temp_directory_path()) /
         ("xboxone_bootstrap_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Temporary() { fs::create_directory(root); }
     ~Temporary() {
@@ -107,8 +107,12 @@ void structural() {
     auto changed = bytes;
     put(changed, 0xdc, 1, 2); write(path, changed); reject(profile(path), "needs_nt_kernel");
     changed = bytes; put(changed, 0x96, 0x2002, 2); write(path, changed); reject(profile(path), "entry_not_executable");
-    changed = bytes; put(changed, 0x170, 0x2000); write(path, changed); reject(profile(path), "delay_imports_unaudited");
-    changed = bytes; put(changed, 0x178, 0x2000); write(path, changed); reject(profile(path), "clr_activation_unsupported");
+    changed = bytes; put(changed, 0x170, 0x20c0); put(changed, 0x174, 64);
+    put(changed, 0x2c0, 1); put(changed, 0x2c4, 0x2080);
+    put(changed, 0x2cc, 0x2060); put(changed, 0x2d0, 0x2060);
+    write(path, changed); reject(profile(path), "delay_imports_unaudited");
+    changed = bytes; put(changed, 0x178, 0x20c0); put(changed, 0x17c, 72);
+    write(path, changed); reject(profile(path), "clr_activation_unsupported");
     changed = bytes; put(changed, 0x104, 17); write(path, changed); reject(profile(path), "image_invalid");
     changed = bytes; put(changed, 0x84, 0xaa64, 2); write(path, changed); reject(profile(path), "image_invalid");
     write(path, bytes);

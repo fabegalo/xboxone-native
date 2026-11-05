@@ -3,8 +3,10 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <iosfwd>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace xboxone::inspection {
@@ -14,6 +16,27 @@ enum class Kind { pe64, xvd };
 struct Import {
     std::string library;
     std::vector<std::string> functions;
+    bool delay_load = false;
+    bool api_set = false; // Contract name, never an inferred host DLL mapping.
+    std::vector<std::uint32_t> ordinal_indices; // Distinguish ordinal #7 from a literal named "#7".
+};
+
+struct Export {
+    std::uint32_t ordinal = 0;
+    std::uint32_t rva = 0;
+    std::vector<std::string> names; // Aliases of the same EAT slot.
+    std::string forwarder;
+    std::string forward_library;
+    std::string forward_symbol;
+};
+
+struct ActivationMetadata {
+    std::string kind; // rt_manifest, rt_version, clr_directory, tls_directory.
+    std::vector<std::string> resource_path; // Resource type/name/language.
+    std::uint32_t rva = 0;
+    std::uint32_t size = 0;
+    std::uint32_t code_page = 0;
+    std::string bytes_hex; // Exact bounded resource bytes; no XML/CLR activation.
 };
 
 struct PeInfo {
@@ -23,12 +46,16 @@ struct PeInfo {
     std::uint16_t sections = 0;
     std::uint64_t image_base = 0;
     std::uint32_t entry_point_rva = 0;
-    // Native bootstrap rejects contracts it cannot audit; these are not parsed
-    // into a complete activation/import graph by the M0 inspector.
     bool has_delay_imports = false;
     bool has_clr_header = false;
     std::vector<Import> imports;
+    std::vector<Export> exports;
+    std::vector<ActivationMetadata> activation_metadata;
 };
+
+bool is_api_set(std::string_view library);
+// Shared deterministic serialization for inspect and version-bound bootstrap.
+void write_pe_json_fields(std::ostream& out, const PeInfo& pe);
 
 struct XvdInfo {
     std::uint32_t volume_flags = 0;

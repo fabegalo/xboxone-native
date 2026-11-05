@@ -28,13 +28,39 @@ void print(const xboxone::systemos::Report& r) {
               << ",\"exit_code\":";
     if (r.exit_code_available) std::cout << r.exit_code;
     else std::cout << "null";
-    std::cout << ",\"dashboard_boot_verified\":false,\"authentic_frames_observed\":0,\"dependencies\":[";
+    std::cout << ",\"dependency_graph_version\":1,\"dashboard_boot_verified\":false,\"authentic_frames_observed\":0,\"dependencies\":[";
     bool first = true;
     for (const auto& d : r.dependencies) {
         if (!first) std::cout << ',';
         first = false;
         std::cout << "{\"requester\":\"" << escape(d.requester) << "\",\"library\":\"" << escape(d.library)
-                  << "\",\"provider\":\"" << escape(d.provider) << "\",\"status\":\"" << escape(d.status) << "\"}";
+                  << "\",\"provider\":\"" << escape(d.provider) << "\",\"status\":\"" << escape(d.status) << "\",\"symbol\":\"" << escape(d.symbol)
+                  << "\",\"kind\":\"" << escape(d.kind) << "\",\"api_set\":" << (d.api_set ? "true" : "false") << ",\"by_ordinal\":" << (d.by_ordinal ? "true" : "false") << '}';
+    }
+    std::cout << "],\"nodes\":[";
+    first = true;
+    for (const auto& n : r.nodes) {
+        if (!first) std::cout << ',';
+        first = false;
+        const auto path = n.artifact.path.generic_u8string();
+        const char* role = "invalid";
+        switch (n.artifact.role) {
+            case xboxone::systemos::Role::executable: role = "executable"; break;
+            case xboxone::systemos::Role::module: role = "module"; break;
+            case xboxone::systemos::Role::resource: role = "resource"; break;
+            case xboxone::systemos::Role::container: role = "container"; break;
+        }
+        std::cout << "{\"id\":\"" << escape(n.artifact.id) << "\",\"version\":\"" << escape(n.artifact.version)
+                  << "\",\"sha256\":\"" << escape(n.artifact.sha256) << "\",\"path\":\""
+                  << escape({reinterpret_cast<const char*>(path.data()), path.size()})
+                  << "\",\"provenance\":\"" << escape(n.artifact.provenance) << "\",\"role\":\"" << role
+                  << "\",\"status\":\"" << escape(n.status) << "\",\"pe\":";
+        if (n.status == "inspected_pe") {
+            std::cout << '{';
+            xboxone::inspection::write_pe_json_fields(std::cout, n.pe);
+            std::cout << '}';
+        } else std::cout << "null";
+        std::cout << '}';
     }
     std::cout << "],\"diagnostics\":[";
     first = true;

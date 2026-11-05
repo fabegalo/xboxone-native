@@ -2,6 +2,43 @@
 
 Data: **2026-11-04**. Estágio máximo demonstrado: um **componente sintético próprio** foi criado como processo Windows AMD64, executou código de memória/threads/imports e terminou com código 0. **Nenhum componente original do SystemOS foi carregado ou inicializado; zero frames autênticos.**
 
+## 2026-11-05 — M1.1: dependências PE e correções de CI
+
+**Estágio entregue:** análise estática versionada, integrada às bibliotecas existentes. Não foi escrito outro loader, hypervisor ou renderer. O contrato de execução nativa continua limitado ao M1 sintético já auditado.
+
+### Caminhos e CI
+
+Os logs do run [41957638750](https://github.com/fabegalo/xboxone-native/actions/runs/41957638750), commit `a7c1196`, comprovam `inventory_regressions` falhando no Windows em `reject symlink ancestor before dot-dot normalization` e 23 falhas estruturais no macOS pela raiz temporária simbólica. `std::filesystem::absolute` do MSVC normalizava antes de validar. A correção mantém os componentes fornecidos, acrescentando o cwd somente a caminhos relativos sem raiz. Cada prefixo passa pela política existente de symlinks/reparse points; só depois o inventário canonicaliza a raiz. `fingerprint` usa a mesma regra. Caminhos relativos com drive/raiz ambíguos recebem erro explícito.
+
+A fixture C++ do bootstrap canonicaliza somente `temp_directory_path()` antes de criar sua pasta exclusiva. Não há canonicalização permissiva de entradas reais. Novas regressões cobrem caminho relativo e fingerprint com `link/..`; a CI configura `XBOXONE_REQUIRE_SYMLINKS=1` e falha se não conseguir criar os links. Python é obrigatório na CI para impedir omissão da nova cobertura.
+
+### Análise e relatório
+
+- Imports normais e delay-load compartilham leitura de thunks PE32+; delay descriptors RVA e VA legado são distinguidos. IAT de fallback é lido somente quando não existe OriginalFirstThunk normal. Nomes e ordinais são distintos mesmo quando um nome literal é `#7` (`ordinal_indices` no inspetor; `by_ordinal` na aresta).
+- Exports: EAT, nomes/aliases, ordinais e slots esparsos; encaminhamentos por nome ou ordinal, inclusive encaminhamento transitivo com binding do módulo que declara o forwarder. Símbolos de dados em BSS são identificados sem tentar ler bytes inexistentes. Nomes são sensíveis a maiúsculas; bibliotecas usam normalização ASCII explícita.
+- API Sets `api-`/`ext-` são marcados como contratos. Nenhum schema do PC é aplicado a um perfil Xbox. Falta de binding gera `api_set_mapping_missing`; um binding para artefato exige módulo da revisão exata e SHA-256 conferido. Não há busca por basename, cache global, fallback de versão ou associação host inferida.
+- Recursos RT_MANIFEST/RT_VERSION são preservados em hexadecimal com caminho de recurso, RVA, tamanho e code page. Diretórios CLR/TLS são identificados por presença/range; **não** se afirma decodificação de classes, XML, metadados CLR, identidades de pacote ou ativação. Manifestos externos/AppxManifest, `.winmd`, imports dinâmicos, serviços e recursos fora do PE exigem evidência/contrato separado; nada é procurado automaticamente fora do manifesto.
+- `prepare` emite `dependency_graph_version=1`, `nodes`, `dependencies` e `diagnostics`, inclusive quando bloqueado (exit code 1). Cada nó mantém caminho original, revisão, hash declarado, procedência e estágio de validação; somente identidades válidas fornecem exports. Cada aresta registra requester, library, provider, symbol, kind (`import`, `delay_import`, `forwarder`), API Set, ordinal e status. Ordenação e deduplicação explícitas tornam o JSON equivalente independentemente da ordem dos registros do manifesto, em entradas estáveis.
+- Ausências de módulo/símbolo/binding, versões/hashes divergentes, ambiguidades e ciclos permanecem erros. `private_export_present`/`private_forwarder_present` são evidência estática: **todos os módulos privados ainda recebem `private_module_activation_unsupported`**. Delay-load e RT_MANIFEST continuam bloqueados para execução. O diagnóstico de kernel/WinRT/broker/compositor/storage foi preservado.
+
+Uso: `xboxone-native inspect <PE-legível> --json` e `xboxone-systemos prepare <manifesto-v1>`; ambos somente leem os arquivos referenciados. Bindings de forwarders usam o mesmo registro `bind`, com o ID do provedor como requester e o nome do alvo como library. O encaminhamento `b.#7` normaliza apenas a extensão para `b.dll`, exigindo binding explícito para esse nome. Encontrar o nome jamais escolhe um arquivo.
+
+Limites: até 1024 descritores por diretório (incluindo terminador), 8192 entradas por thunk table (incluindo terminador), 65536 símbolos importados/imagem, 65536 slots/nomes exportados, strings ASCII de até 255 bytes + NUL, 4096 entradas de recurso e 1 MiB de bytes de ativação/imagem. O perfil limita metadados a 65536 registros de símbolo e 16 MiB de recursos, 65536 passos do grafo e profundidade de forwarders <64. Seções sobrepostas/overflow e leituras fora de dados mapeados são recusadas. Não é um loader nem uma autenticação PE/Microsoft. Sem alegação de ganho de desempenho; não foi introduzida instrumentação no caminho de execução.
+
+Referências de formato: [PE](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format) e [API Sets](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets), consultadas para os contratos, sem incorporar código de terceiros.
+
+### Evidência e insumo original
+
+Windows x64, MSVC 19.44.35229/SDK 10.0.26100, CMake/Ninja Release. Build dos targets afetados aprovado. **Oito grupos CTest passaram**: `inspection_regressions`, `inventory_regressions`, `update_zip_and_cli_regressions`, `systemos_preflight_regressions`, `bootstrap_regressions`, `pe_dependency_regressions`, `bootstrap_native_execution`, `bootstrap_cli_regressions`. A nova suíte Python possui **15 testes**, com subcasos de tabelas malformadas, limites, nomes, aliases, forwarders/ciclos/profundidade, versão/hash, API Sets, recursos e determinismo. Bootstrap: 103 verificações estruturais, 19 nativas e 7 testes CLI. A criação local de symlinks foi recusada por privilégio; os runners precisam executá-los obrigatoriamente. Nenhum teste gráfico foi executado.
+
+CI Windows/Linux/macOS: **aguardando execução do commit M1.1**. Resultado final será registrado depois de observar os três jobs; compilação não será tratada como sucesso de runtime Xbox nem certificação dos seis targets planejados.
+
+A busca ficou limitada às entradas fornecidas e já autorizadas. A listagem atual do diretório ZIP do **OSU2** contém somente os oito XVDs registrados anteriormente; tamanho/lista coincidem, mas isso não revalida o hash completo ou a assinatura. Não apareceu PE/manifesto diretamente legível nem uma nova pasta de SystemOS nas raízes fornecidas. Reutilizou-se a evidência anterior dos prefixos/flags de criptografia, sem recalcular gigabytes, abrir OSU3/OSU1, extrair arquivos ou alterar originais. Identidade de OSU2 e de `system.xvd`: seção histórica abaixo. **Bloqueio mantido: falta componente original legível e seus recursos da mesma revisão. Nenhum contrato de ativação original pôde ser identificado ou executado; zero frames autênticos.**
+
+As alterações gráficas concorrentes, CMake de apresentação e documentação alheia foram preservadas no workspace e excluídas do commit M1.1. A documentação compartilhada recebeu somente os trechos desta tarefa.
+
+## Evidência histórica do M1 — 2026-11-04
+
 ## M0 publicado e candidato inicial
 
 O commit `7307692` publicou na `main` o inventário, os adaptadores ZIP, a pré-checagem, os perfis por identidade e os metadados de OSU1/2/3. Nenhum ZIP/membro original foi alterado, extraído ou duplicado. As evidências anteriores estão em [M0-STATUS.md](M0-STATUS.md); hashes completos dos arquivos não foram recalculados desnecessariamente no M1.

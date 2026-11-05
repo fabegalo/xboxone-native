@@ -52,6 +52,16 @@ bool linked_ancestor(const fs::path& path) {
     return false;
 }
 
+fs::path supplied_absolute(const fs::path& path) {
+    // MSVC absolute() calls GetFullPathNameW, collapsing link/.. before it can
+    // be inspected. Append relative components without normalizing them.
+    if (path.is_absolute()) return path;
+    if (path.has_root_path())
+        throw fs::filesystem_error("rooted-relative paths are ambiguous", path,
+                                  std::make_error_code(std::errc::invalid_argument));
+    return fs::current_path() / path;
+}
+
 bool approved(const fs::path& path) {
     const auto extension = fold(utf8(path.extension()));
     return extension == ".exe" || extension == ".dll" || extension == ".sys" || extension == ".xvd";
@@ -112,7 +122,7 @@ bool fingerprint(const fs::path& path, std::string& sha256, std::string& error,
     sha256.clear();
     error.clear();
     try {
-        if (linked_ancestor(fs::absolute(path)) || !fs::is_regular_file(path)) {
+        if (linked_ancestor(supplied_absolute(path)) || !fs::is_regular_file(path)) {
             error = "artifact is not a regular, non-linked file";
             return false;
         }
@@ -133,7 +143,7 @@ bool scan(const fs::path& root, Report& report, std::string& error, const Limits
     report = {};
     error.clear();
     try {
-        const auto supplied = fs::absolute(root);
+        const auto supplied = supplied_absolute(root);
         if (linked_ancestor(supplied)) { error = "inventory root contains a symlink or reparse point"; return false; }
         const auto absolute = fs::canonical(supplied);
         if (!fs::is_directory(absolute)) { error = "inventory root is not a directory"; return false; }

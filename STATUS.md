@@ -1,5 +1,14 @@
 # STATUS — xboxone-native
 
+## 2026-11-05 — M1.1: CI e grafo estático de dependências PE
+
+- Corrigida a validação Windows: preservar `link/..` antes da inspeção de cada ancestral, tanto no inventário quanto no fingerprint. Caminhos relativos com raiz ambígua são recusados. Fixtures do bootstrap usam a raiz temporária canonicalizada; entradas reais continuam recusando symlinks/reparse points. A CI exige cobertura de symlinks, sem transformar falta de privilégio em aprovação.
+- `xboxone_inspection`: imports normais e delay-load (RVA/VA legado), nomes/ordinais distintos, exports/aliases/ordinais esparsos e forwarders. Identifica API Sets sem deduzir host/schema; expõe bytes de RT_MANIFEST/RT_VERSION e presença dos diretórios CLR/TLS. Limites de RVA, seções, tabelas, strings e recursos são validados.
+- `xboxone_systemos prepare`: JSON determinístico com nós por artefato/revisão/SHA-256/procedência e arestas por símbolo, incluindo encaminhamentos transitivos, ciclos e falhas precisas. Provedores exigem bindings explícitos e identidade validada; exports encontrados **não autorizam execução privada, delay-load, API Set ou ativação SxS/WinRT**.
+- Windows x64/MSVC Release: **oito grupos afetados aprovados**, incluindo **15 testes Python novos de PE/grafo**, 103 verificações estruturais, 19 nativas e 7 testes CLI do bootstrap. Este host não permite criar symlinks; a validação efetiva desses casos depende dos runners com cobertura obrigatória. CI Windows/Linux/macOS: aguardando execução do commit M1.1.
+- Busca limitada aos insumos fornecidos: o diretório ZIP do **OSU2**, consultado somente para leitura, contém os oito XVDs já catalogados e nenhum PE/manifesto diretamente legível. Tamanho/lista coincidem com o catálogo anterior; hashes completos não foram recalculados nem certificados novamente. Permanece o bloqueio por conteúdo interno criptografado já documentado. Nenhum OSU alterado/extraído, componente original executado ou frame autêntico produzido.
+- A camada gráfica e as alterações concorrentes foram preservadas fora deste commit. Detalhes e limites: [docs/M1-STATUS.md](docs/M1-STATUS.md). Nenhuma Release publicada.
+
 ## 2026-11-04 — M1: sessão versionada e execução nativa sintética verificável
 
 - **M0 publicado na `main`: `7307692`.** Preservados OSU1/2/3, perfis, hashes e originais. OSU2 é a referência histórica inicial de investigação; OSU3 compartilha seu SystemOS, mas continua pacote independente. Versão comercial da dashboard não confirmada; revisão bruta `0x341400004723ad20` não foi promovida a versão autenticada.

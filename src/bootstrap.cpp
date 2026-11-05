@@ -10,6 +10,7 @@
 #include <set>
 #include <sstream>
 #include <string_view>
+#include <tuple>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -211,7 +212,11 @@ bool Session::prepare(const Profile& profile) {
     std::map<std::string, inspection::Report> images;
     std::set<fs::path> paths;
     std::uint64_t total_bytes = 0;
+    std::size_t metadata_records = 0, metadata_bytes = 0;
+    report_.nodes.reserve(profile.artifacts.size());
     for (const auto& a : profile.artifacts) {
+        const auto identity_errors = report_.diagnostics.size();
+        auto& node = report_.nodes.emplace_back(DependencyNode{a, "identity_rejected", {}});
         if (!token(a.id) || !artifacts.emplace(a.id, &a).second) {
             block(report_, "ambiguous_artifact", a.id, "invalid or duplicate artifact id");
             continue;
@@ -248,6 +253,8 @@ bool Session::prepare(const Profile& profile) {
         else paths.insert(canonical);
         if (hash != a.sha256) block(report_, "hash_mismatch", a.id, "content does not match pinned SHA-256");
         if (a.id == profile.entry) report_.entry_sha256 = hash;
+        if (report_.diagnostics.size() != identity_errors) continue;
+        node.status = "identity_verified";
         if (a.role == Role::resource) continue;
         inspection::Report image;
         if (!inspection::inspect(a.path, image, error)) {
@@ -255,6 +262,7 @@ bool Session::prepare(const Profile& profile) {
             continue;
         }
         if (image.kind == inspection::Kind::xvd) {
+            node.status = "identified_container";
             block(report_, (image.xvd.volume_flags & 2) ? "container_not_executable" : "encrypted_container",
                   a.id, "XVD metadata does not expose a readable executable; no decryption backend");
             continue;
@@ -263,13 +271,27 @@ bool Session::prepare(const Profile& profile) {
             block(report_, "role_mismatch", a.id, "PE cannot satisfy a declared container role");
             continue;
         }
+        std::size_t records = image.pe.exports.size(), bytes = 0;
+        for (const auto& i : image.pe.imports) records += i.functions.size();
+        for (const auto& e : image.pe.exports) records += e.names.size();
+        for (const auto& m : image.pe.activation_metadata) bytes += m.bytes_hex.size() / 2;
+        if (records > 65536 - metadata_records || bytes > 16 * 1024 * 1024 - metadata_bytes) {
+            block(report_, "dependency_metadata_limit", a.id, "profile exceeds 65536 symbol records or 16 MiB activation resources");
+            continue;
+        }
+        metadata_records += records; metadata_bytes += bytes;
+        node.status = "inspected_pe";
+        node.pe = image.pe;
         const auto& pe = image.pe;
         if (pe.subsystem == 1 || (pe.characteristics & 0x1000))
             block(report_, "needs_nt_kernel", a.id, "native subsystem/system image requires an isolated kernel backend evaluation");
         else if (pe.subsystem != 3)
             block(report_, "activation_model_unsupported", a.id, "only audited Win32 console activation is implemented");
         if (pe.has_delay_imports)
-            block(report_, "delay_imports_unaudited", a.id, "delayed import graph is not yet resolved");
+            block(report_, "delay_imports_unaudited", a.id, "delay imports were inspected; execution semantics remain unaudited");
+        if (std::any_of(pe.activation_metadata.begin(), pe.activation_metadata.end(), [](const auto& m) {
+                return m.kind == "rt_manifest";
+            })) block(report_, "activation_manifest_unaudited", a.id, "embedded manifest identified; SxS/package activation contract not audited");
         if (pe.has_clr_header)
             block(report_, "clr_activation_unsupported", a.id, "managed activation is not implemented");
         if (a.id == profile.entry && (a.role != Role::executable || (pe.characteristics & 0x2000) ||
@@ -283,56 +305,109 @@ bool Session::prepare(const Profile& profile) {
 
     using Key = std::pair<std::string, std::string>;
     std::map<Key, const ImportBinding*> bindings;
+    std::set<Key> ambiguous, used;
     for (const auto& b : profile.imports) {
-        if (!bindings.emplace(Key{b.requester, fold(b.library)}, &b).second)
+        const Key key{b.requester, fold(b.library)};
+        if (!bindings.emplace(key, &b).second) {
+            ambiguous.insert(key);
             block(report_, "ambiguous_import", b.requester + ":" + b.library, "multiple explicit providers; no fallback selected");
-        if (b.evidence.empty()) block(report_, "binding_without_evidence", b.requester, "host compatibility must be audited explicitly");
+        }
+        if (b.evidence.empty()) block(report_, "binding_without_evidence", b.requester, "compatibility must be audited explicitly");
     }
-    std::set<Key> used;
+    std::map<Key, const inspection::Export*> named_exports, ordinal_exports;
+    for (const auto& [id, image] : images) for (const auto& e : image.pe.exports) {
+        ordinal_exports.emplace(Key{id, "#" + std::to_string(e.ordinal)}, &e);
+        for (const auto& name : e.names) named_exports.emplace(Key{id, name}, &e);
+    }
+    std::size_t traversed = 0;
+    bool graph_limit = false;
+    const auto resolve = [&](auto&& self, const std::string& id, const std::string& library,
+                             const std::string& symbol, const std::string& kind, bool by_ordinal, std::set<Key>& active) -> void {
+        if (++traversed > 65536 || active.size() >= 64) {
+            if (!graph_limit) block(report_, "dependency_graph_limit", id, "<=65536 edges and forwarder depth <64 required");
+            graph_limit = true;
+            return;
+        }
+        const Key key{id, fold(library)};
+        const auto binding = bindings.find(key);
+        Dependency d{id, fold(library), "", "missing_binding", symbol, kind, inspection::is_api_set(library), by_ordinal};
+        const auto subject = id + ":" + d.library + "!" + symbol;
+        std::string next_id, next_library, next_symbol;
+        if (binding == bindings.end()) {
+            block(report_, d.api_set ? "api_set_mapping_missing" : "missing_import", subject,
+                  "no explicit provider in this version-bound profile; no host/schema fallback");
+        } else {
+            used.insert(key);
+            const auto& b = *binding->second;
+            d.provider = b.provider;
+            if (ambiguous.count(key) || b.evidence.empty()) d.status = "binding_rejected";
+            else if (b.provider == "host:kernel32" && key.second == "kernel32.dll" && !d.api_set) {
+                d.status = "host_exports_verified";
+                if (!native_host()) {
+                    d.status = "host_unavailable";
+                    block(report_, "native_backend_unavailable", subject, "requires native Windows AMD64");
+                } else if (!symbol.empty() && !host_symbol(symbol)) {
+                    d.status = "host_symbol_missing";
+                    block(report_, "host_symbol_missing", subject, "export unavailable or ordinal contract unaudited");
+                }
+            } else if (b.provider.starts_with("artifact:")) {
+                const auto provider = b.provider.substr(9);
+                const auto target = artifacts.find(provider);
+                const auto image = images.find(provider);
+                if (target == artifacts.end() || target->second->role != Role::module) {
+                    d.status = "missing_private_module";
+                    block(report_, "missing_private_module", subject, "exact module id required: " + provider);
+                } else if (image == images.end()) {
+                    d.status = "private_identity_unverified";
+                    block(report_, "private_identity_unverified", subject, "provider version/hash/PE validation failed: " + provider);
+                } else {
+                    block(report_, "private_module_activation_unsupported", subject,
+                          "static export analysis cannot authorize isolated DLL search or ABI execution: " + provider);
+                    const auto& exports = by_ordinal ? ordinal_exports : named_exports;
+                    const auto found = exports.find(Key{provider, symbol});
+                    if (symbol.empty()) d.status = "private_module_present";
+                    else if (found == exports.end()) {
+                        d.status = "private_symbol_missing";
+                        block(report_, "private_symbol_missing", subject, "symbol absent from pinned provider " + provider);
+                    } else if (found->second->forwarder.empty()) d.status = "private_export_present";
+                    else if (active.count({provider, symbol + (by_ordinal ? ":ordinal" : ":name")})) {
+                        d.status = "forwarder_cycle";
+                        block(report_, "forwarder_cycle", subject, "cycle at " + provider + "!" + symbol);
+                    } else {
+                        d.status = "private_forwarder_present";
+                        next_id = provider; next_library = found->second->forward_library; next_symbol = found->second->forward_symbol;
+                    }
+                }
+            } else {
+                d.status = "unsupported_provider";
+                block(report_, "unsupported_import_provider", subject, "no verified adapter for " + b.provider);
+            }
+        }
+        report_.dependencies.push_back(std::move(d));
+        if (!next_id.empty()) {
+            const Key target{next_id, symbol + (by_ordinal ? ":ordinal" : ":name")};
+            active.insert(target);
+            self(self, next_id, next_library, next_symbol, "forwarder", next_symbol.starts_with("#"), active);
+            active.erase(target);
+        }
+    };
     for (const auto& [id, image] : images) {
         for (const auto& imported : image.pe.imports) {
-            const Key key{id, fold(imported.library)};
-            const auto binding = bindings.find(key);
-            Dependency d{id, imported.library, "", "missing_binding"};
-            if (binding == bindings.end()) {
-                block(report_, "missing_import", id + ":" + imported.library, "no explicit provider in this version-bound profile");
-            } else {
-                used.insert(key);
-                const auto& b = *binding->second;
-                d.provider = b.provider;
-                if (b.provider == "host:kernel32" && key.second == "kernel32.dll") {
-                    d.status = "host_exports_verified";
-                    if (!native_host()) {
-                        d.status = "host_unavailable";
-                        block(report_, "native_backend_unavailable", id, "requires native Windows AMD64, not ARM64 emulation");
-                    } else for (const auto& symbol : imported.functions) {
-                        if (!host_symbol(symbol)) {
-                            d.status = "host_symbol_missing";
-                            block(report_, "host_symbol_missing", imported.library + "!" + symbol, "export unavailable or ordinal contract unaudited");
-                        }
-                    }
-                } else if (b.provider.starts_with("artifact:")) {
-                    const auto provider = b.provider.substr(9);
-                    const auto target = artifacts.find(provider);
-                    if (target == artifacts.end() || target->second->role != Role::module) {
-                        d.status = "missing_private_module";
-                        block(report_, "missing_private_module", provider, "exact module id required in this profile");
-                    } else {
-                        d.status = "private_exports_unaudited";
-                        block(report_, "private_module_activation_unsupported", provider,
-                              "identity located; exports/forwarders and isolated DLL search must be implemented before execution");
-                    }
-                } else {
-                    d.status = "unsupported_provider";
-                    block(report_, "unsupported_import_provider", b.provider, "no verified native adapter for this import contract");
-                }
-            }
-            report_.dependencies.push_back(std::move(d));
+            std::set<Key> active;
+            if (imported.functions.empty()) resolve(resolve, id, imported.library, "", imported.delay_load ? "delay_import" : "import", false, active);
+            for (std::size_t index = 0; index < imported.functions.size(); ++index)
+                resolve(resolve, id, imported.library, imported.functions[index], imported.delay_load ? "delay_import" : "import",
+                        std::binary_search(imported.ordinal_indices.begin(), imported.ordinal_indices.end(), index), active);
+        }
+        // Include unused forwarded exports too; a static graph is conservative.
+        for (const auto& e : image.pe.exports) if (!e.forwarder.empty()) {
+            std::set<Key> active{{id, "#" + std::to_string(e.ordinal) + ":ordinal"}};
+            resolve(resolve, id, e.forward_library, e.forward_symbol, "forwarder", e.forward_symbol.starts_with("#"), active);
         }
     }
     for (const auto& [key, binding] : bindings) {
         (void)binding;
-        if (!used.count(key)) block(report_, "unused_binding", key.first + ":" + key.second, "binding does not correspond to an inspected import");
+        if (!used.count(key)) block(report_, "unused_binding", key.first + ":" + key.second, "binding does not correspond to an inspected dependency");
     }
     std::set<std::string> service_ids;
     for (const auto& s : profile.services) {
@@ -354,6 +429,19 @@ bool Session::prepare(const Profile& profile) {
     }
     if (!native_host())
         block(report_, "native_backend_unavailable", profile.id, "execution implemented only for native Windows AMD64");
+    std::sort(report_.nodes.begin(), report_.nodes.end(), [](const auto& a, const auto& b) {
+        return std::tie(a.artifact.id, a.artifact.sha256, a.status) < std::tie(b.artifact.id, b.artifact.sha256, b.status);
+    });
+    const auto edge_key = [](const auto& d) { return std::tie(d.requester, d.kind, d.library, d.symbol, d.by_ordinal, d.provider, d.status); };
+    std::sort(report_.dependencies.begin(), report_.dependencies.end(), [&](const auto& a, const auto& b) { return edge_key(a) < edge_key(b); });
+    report_.dependencies.erase(std::unique(report_.dependencies.begin(), report_.dependencies.end(), [&](const auto& a, const auto& b) {
+        return edge_key(a) == edge_key(b);
+    }), report_.dependencies.end());
+    const auto diagnostic_key = [](const auto& d) { return std::tie(d.code, d.subject, d.detail); };
+    std::sort(report_.diagnostics.begin(), report_.diagnostics.end(), [&](const auto& a, const auto& b) { return diagnostic_key(a) < diagnostic_key(b); });
+    report_.diagnostics.erase(std::unique(report_.diagnostics.begin(), report_.diagnostics.end(), [&](const auto& a, const auto& b) {
+        return diagnostic_key(a) == diagnostic_key(b);
+    }), report_.diagnostics.end());
     if (!report_.diagnostics.empty()) return false;
     report_.stage = Stage::prepared;
     return true;

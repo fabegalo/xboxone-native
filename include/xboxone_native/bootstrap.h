@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
+#include "xboxone_native/inspection.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -58,6 +59,16 @@ struct Dependency {
     std::string library;
     std::string provider;
     std::string status;
+    std::string symbol;
+    std::string kind; // import, delay_import, forwarder.
+    bool api_set = false;
+    bool by_ordinal = false;
+};
+
+struct DependencyNode {
+    Artifact artifact;
+    std::string status;
+    inspection::PeInfo pe;
 };
 
 struct Report {
@@ -69,6 +80,7 @@ struct Report {
     std::string entry_sha256;
     std::vector<Diagnostic> diagnostics;
     std::vector<Dependency> dependencies;
+    std::vector<DependencyNode> nodes;
     std::uint32_t process_id = 0;
     bool primary_thread_resumed = false;
     std::uint32_t exit_code = 0;
