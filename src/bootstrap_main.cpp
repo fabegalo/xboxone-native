@@ -28,7 +28,56 @@ void print(const xboxone::systemos::Report& r) {
               << ",\"exit_code\":";
     if (r.exit_code_available) std::cout << r.exit_code;
     else std::cout << "null";
-    std::cout << ",\"dependency_graph_version\":1,\"dashboard_boot_verified\":false,\"authentic_frames_observed\":0,\"dependencies\":[";
+    std::cout << ",\"execution_model\":\"" << escape(r.execution_model) << "\",\"activated_aumid\":\"" << escape(r.activated_aumid)
+              << "\",\"activation_events\":[";
+    bool event_first = true;
+    for (const auto& e : r.activation_events) {
+        if (!event_first) std::cout << ',';
+        event_first = false;
+        std::cout << "{\"api\":\"" << escape(e.api) << "\",\"result\":" << e.result << ",\"result_kind\":\"" << escape(e.result_kind) << "\"}";
+    }
+    std::cout << "],\"packages\":[";
+    bool package_first = true;
+    for (const auto& p : r.packages) {
+        if (!package_first) std::cout << ',';
+        package_first = false;
+        const auto& m = p.manifest;
+        std::cout << "{\"artifact\":\"" << escape(p.artifact) << "\",\"name\":\"" << escape(m.name)
+                  << "\",\"publisher\":\"" << escape(m.publisher) << "\",\"version_raw\":" << m.version
+                  << ",\"architecture\":" << m.architecture << ",\"resource_id\":\"" << escape(m.resource_id)
+                  << "\",\"full_name\":\"" << escape(m.full_name) << "\",\"family_name\":\"" << escape(m.family_name) << "\",\"applications\":[";
+        bool first_app = true;
+        for (const auto& a : m.applications) {
+            if (!first_app) std::cout << ',';
+            first_app = false;
+            std::cout << "{\"id\":\"" << escape(a.id) << "\",\"executable\":\"" << escape(a.executable)
+                      << "\",\"entry_point\":\"" << escape(a.entry_point) << "\",\"aumid\":\"" << escape(a.aumid) << "\"}";
+        }
+        std::cout << "],\"capabilities\":[";
+        bool first_capability = true;
+        for (const auto& c : m.capabilities) {
+            if (!first_capability) std::cout << ',';
+            first_capability = false;
+            std::cout << "{\"name\":\"" << escape(c.name) << "\",\"namespace\":\"" << escape(c.namespace_uri) << "\"}";
+        }
+        std::cout << "],\"dependencies\":[";
+        bool first_dependency = true;
+        for (const auto& d : m.dependencies) {
+            if (!first_dependency) std::cout << ',';
+            first_dependency = false;
+            std::cout << "{\"name\":\"" << escape(d.name) << "\",\"publisher\":\"" << escape(d.publisher)
+                      << "\",\"min_version_raw\":" << d.min_version << '}';
+        }
+        std::cout << "],\"device_families\":[";
+        bool first_family = true;
+        for (const auto& family : m.device_families) {
+            if (!first_family) std::cout << ',';
+            first_family = false;
+            std::cout << '"' << escape(family) << '"';
+        }
+        std::cout << "]}";
+    }
+    std::cout << "],\"dependency_graph_version\":1,\"dashboard_boot_verified\":false,\"authentic_frames_observed\":0,\"dependencies\":[";
     bool first = true;
     for (const auto& d : r.dependencies) {
         if (!first) std::cout << ',';
@@ -83,7 +132,8 @@ int main(int argc, char** argv) {
         std::cout << "SystemOS bootstrap (no renderer)\n"
                      "  xboxone-systemos prepare <manifest>\n"
                      "  xboxone-systemos run <manifest> [timeout-ms: 1..60000, default 5000]\n"
-                     "Only explicitly audited Win32 console PE AMD64 contracts are executable.\n";
+                     "Win32 console or explicit owned packaged desktop lifecycle contract; no Xbox activation.\n"
+                     "AppModel run never registers packages. Its timeout bounds observation after synchronous COM activation.\n";
         return 0;
     }
     if (argc < 3 || argc > 4) { std::cerr << "invalid arguments; use --help\n"; return 2; }

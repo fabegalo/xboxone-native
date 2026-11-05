@@ -2,6 +2,45 @@
 
 Data: **2026-11-04**. Estágio máximo demonstrado: um **componente sintético próprio** foi criado como processo Windows AMD64, executou código de memória/threads/imports e terminou com código 0. **Nenhum componente original do SystemOS foi carregado ou inicializado; zero frames autênticos.**
 
+## 2026-11-05 — M1.2: AppModel, entrega limitada pelos testes efetivos
+
+**Demonstrado:** leitura/validação de manifesto pelo SDK Windows, grafo estático de pacotes com identidade fixada e falhas reais de consulta/ativação. **Não demonstrado:** ativação positiva de pacote, ciclo de vida por AppModel, UWP/WinRT de Xbox ou segundo modelo de execução bem-sucedido. O backend positivo foi compilado, mas não certificado por execução.
+
+`read_manifest` usa `XmlLite` (DTD proibido, resolver nulo, profundidade 32, <=8192 nós e 64 atributos/elemento) antes de `IAppxFactory::CreateManifestReader`, sobre o mesmo snapshot <=1 MiB cujo SHA-256 é comparado ao artefato. O SDK valida namespaces/schema e fornece identidade completa/família, versão numérica, arquitetura, Application ID, EntryPoint, AUMID e dependências. Capacidades mantêm seu namespace; extensões/atributos fora do subconjunto auditado bloqueiam ativação. Até 256 entradas por coleção. Linux/macOS retornam indisponibilidade explícita do leitor SDK; não há parser ou runtime Windows simulado.
+
+Extensão do perfil v1 (os registros `artifact` continuam exigindo revisão exata, SHA-256 e procedência):
+
+```text
+appmodel "id-do-AppxManifest" "ApplicationId-exato" "evidencia do contrato de ativacao"
+package_bind "id-manifesto-requester" "nome-dependencia" "id-manifesto-provedor" "evidencia"
+```
+
+Manifestos são recursos chamados `AppxManifest.xml`; nenhum pacote é descoberto por nome. A entrada PE já inspecionada precisa coincidir com `Executable` sob a raiz do manifesto. Assets referenciados também exigem artefatos fixados. Arestas `appx_application`, `appx_resource`, `appx_package` reutilizam nós M1.1 e seu ordenamento. O binding escolhe um único provedor da revisão exata do perfil; nome/publisher/arquitetura/minimum version do Appx são conferidos, sem seleção automática de versão. Ciclos, bindings duplicados/ociosos, hashes divergentes e paths absolutos/traversal/ADS/dispositivos/reparse points são erros. Inputs devem permanecer estáveis; não há snapshot atômico de diretórios hostis.
+
+O caminho Win32 existente permanece independente. AppModel aceita para tentativa somente o contrato sintético de **uma aplicação desktop x64**, `Windows.FullTrustApplication`, `Windows.Desktop`, capacidade `runFullTrust`, sem dependências externas. O resolvedor estático de pacotes não autoriza o grafo escolhido pelo Windows: dependências continuam com `package_graph_activation_unsupported` até implementar e testar a conferência do grafo registrado. Classes WinRT/UWP, capacidades adicionais, serviços e origem `original` recebem bloqueio explícito; ativação desktop não satisfaz o requisito `winrt_activation` de um serviço Xbox.
+
+`run` revalida o perfil, consulta o full name exato no Windows, confere a raiz e mantém o EXE aberto sem compartilhamento de escrita/delete. Invoca `IApplicationActivationManager::ActivateApplication` com `AO_NOERRORUI`, sem fallback ou registro. O PID é consultado para package full name, AUMID e caminho de imagem. O protocolo da fixture usa três eventos nomeados por GUID (started/stop/finished), retorno cooperativo e exit code. Não retoma thread como Win32, não mata PID possivelmente reutilizado e não contabiliza frames. `timeout-ms` limita observação **após** a chamada COM síncrona; não limita a RPC de ativação. A fixture se autoencerra em até 10 s após abrir eventos. Falha/timeout não afirma encerramento que não foi observado.
+
+### Evidência Windows e teste descartável pendente
+
+MSVC 19.44.35229, SDK 10.0.26100, Ninja/Release. Targets afetados compilados, incluindo `appmodel_component` (código próprio, sem CRT/janela/renderer). Sete grupos passaram: `appmodel_path_contracts`, `appmodel_manifest_regressions`, `appmodel_activation_failure`, `bootstrap_regressions`, `bootstrap_native_execution`, `bootstrap_cli_regressions`, `pe_dependency_regressions`. AppModel: **28 verificações portáveis e 16 testes Python**, incluindo XML inválido/DTD/namespace/limites, UTF-16/Unicode, identidade, publishers/versões/hashes/assets, ciclos, determinismo, contratos Xbox recusados e pacote ausente. Um symlink foi ignorado por privilégio local; CI mantém `XBOXONE_REQUIRE_SYMLINKS=1`. Bootstrap preservado: 103 verificações estruturais, 19 nativas, 7 CLI; grafo PE: 16 casos.
+
+Teste negativo compartilhado com o backend: dentro do sandbox de ferramentas, `CoCreateInstance` retornou `0x80070005`; fora dele, retornou `S_OK`, `CoAllowSetForegroundWindow` retornou `0x80070005` (registrado, sem conceder foreground) e a chamada real `ActivateApplication` de AUMID aleatório inexistente retornou **`0x80073CF1`**. Nenhum pacote foi registrado ou aplicativo instalado ativado. A evidência ignorada `build-appmodel/appmodel-evidence.json` registra o EXE próprio compilado, hashes e falha de `GetPackagePathByFullName`, PID 0. `build-appmodel/disposable-evidence.json` registra a recusa de registro neste host. Não se equiparam falha real de API e ativação positiva.
+
+```powershell
+cmake --build build-appmodel --target xboxone-systemos xboxone_appmodel_path_tests xboxone_appmodel_activation_tests appmodel_component xboxone_bootstrap_tests bootstrap_component_ok bootstrap_component_hang bootstrap_component_fail xboxone-native
+ctest --test-dir build-appmodel -R '^(appmodel_path_contracts|appmodel_manifest_regressions|appmodel_activation_failure|bootstrap_regressions|bootstrap_native_execution|bootstrap_cli_regressions|pe_dependency_regressions)$' --output-on-failure
+# Somente DENTRO de guest descartavel Windows Sandbox ou VM GitHub-hosted,
+# em conta nao elevada com registro oficial de desenvolvimento ja disponivel:
+python tests/appmodel_disposable_test.py --disposable --bootstrap <xboxone-systemos.exe> --component <appmodel_component.exe> --evidence <resultado.json>
+```
+
+O runner positivo fica fora do CTest padrão. Recusa o host, conta elevada e identidade preexistente; cria nome único, registra somente o pacote próprio e tenta remover somente a identidade cuja raiz coincide com a fixture. Não habilita recursos/Developer Mode, instala certificados ou pede administrador. Gera evidência de deployment/ativação/limpeza, inclusive bloqueios. O fluxo positivo/deployment/limpeza ainda precisa ser exercitado em guest: **`WindowsSandbox.exe` não existe neste host e nenhum guest descartável estava disponível**. A restrição de COM do sandbox de ferramentas não fornece isolamento de registro Appx e não foi tratada como guest.
+
+Para um componente original futuro: inventariar arquivos já legíveis no local, fixar manifesto/EXE/assets/módulos por revisão/procedência/hash, selecionar Application ID explícito e encaminhar a análise ao AppModel. A origem original permanece bloqueada até auditar seus serviços e contrato real; namespaces/classes/brokers Xbox não têm substituição desktop. O objetivo seguinte continua a primeira imagem da dashboard por código e recursos originais da mesma versão.
+
+Referências oficiais: [manifest reader](https://learn.microsoft.com/en-us/windows/win32/api/appxpackaging/nf-appxpackaging-iappxfactory-createmanifestreader), [ActivateApplication](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-iapplicationactivationmanager-activateapplication) e [manifesto desktop](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-manual-conversion). Nenhum código de terceiros incorporado.
+
 ## 2026-11-05 — M1.1: dependências PE e correções de CI
 
 **Estágio entregue:** análise estática versionada, integrada às bibliotecas existentes. Não foi escrito outro loader, hypervisor ou renderer. O contrato de execução nativa continua limitado ao M1 sintético já auditado.

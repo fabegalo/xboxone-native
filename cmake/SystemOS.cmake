@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Independent bootstrap; deliberately has no dependency on presentation code.
 add_library(xboxone_systemos STATIC ${PROJECT_SOURCE_DIR}/src/bootstrap.cpp)
+target_sources(xboxone_systemos PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/appmodel_manifest.cpp
+    ${PROJECT_SOURCE_DIR}/src/appmodel.cpp
+    ${PROJECT_SOURCE_DIR}/src/appmodel_activation.cpp)
+if(WIN32)
+    target_link_libraries(xboxone_systemos PRIVATE ole32 shlwapi xmllite uuid)
+endif()
 target_link_libraries(xboxone_systemos PUBLIC xboxone_inspection)
 target_compile_features(xboxone_systemos PUBLIC cxx_std_20)
 if(MSVC)
@@ -12,6 +19,10 @@ add_executable(xboxone-systemos ${PROJECT_SOURCE_DIR}/src/bootstrap_main.cpp)
 target_link_libraries(xboxone-systemos PRIVATE xboxone_systemos)
 
 if(XBOXONE_NATIVE_BUILD_TESTS)
+    add_executable(xboxone_appmodel_path_tests ${PROJECT_SOURCE_DIR}/tests/appmodel_path_tests.cpp)
+    target_link_libraries(xboxone_appmodel_path_tests PRIVATE xboxone_systemos)
+    add_test(NAME appmodel_path_contracts COMMAND xboxone_appmodel_path_tests)
+    set_tests_properties(appmodel_path_contracts PROPERTIES TIMEOUT 10)
     if(DEFINED ENV{GITHUB_ACTIONS} AND NOT Python3_Interpreter_FOUND)
         message(FATAL_ERROR "CI requires Python regression coverage")
     endif()
@@ -27,6 +38,23 @@ if(XBOXONE_NATIVE_BUILD_TESTS)
     endif()
     if(WIN32 AND MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
        CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
+        add_executable(xboxone_appmodel_activation_tests ${PROJECT_SOURCE_DIR}/tests/appmodel_activation_tests.cpp)
+        target_include_directories(xboxone_appmodel_activation_tests PRIVATE ${PROJECT_SOURCE_DIR}/src)
+        target_link_libraries(xboxone_appmodel_activation_tests PRIVATE xboxone_systemos)
+        add_test(NAME appmodel_activation_failure COMMAND xboxone_appmodel_activation_tests)
+        set_tests_properties(appmodel_activation_failure PROPERTIES TIMEOUT 20 LABELS "windows;appmodel;no-deployment")
+        add_executable(appmodel_component ${PROJECT_SOURCE_DIR}/tests/appmodel_component.cpp)
+        target_compile_options(appmodel_component PRIVATE /GS- /Zl)
+        target_link_libraries(appmodel_component PRIVATE kernel32)
+        target_link_options(appmodel_component PRIVATE /NODEFAULTLIB /ENTRY:appmodel_test_entry
+                            /SUBSYSTEM:WINDOWS /MANIFEST:NO /INCREMENTAL:NO)
+        if(Python3_Interpreter_FOUND)
+            add_test(NAME appmodel_manifest_regressions
+                COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/appmodel_tests.py"
+                        $<TARGET_FILE:xboxone-systemos> $<TARGET_FILE:appmodel_component>
+                        "${CMAKE_CURRENT_BINARY_DIR}/appmodel-evidence.json")
+            set_tests_properties(appmodel_manifest_regressions PROPERTIES TIMEOUT 60 LABELS "windows;appmodel;no-deployment")
+        endif()
         foreach(variant IN ITEMS ok hang fail)
             add_executable(bootstrap_component_${variant} ${PROJECT_SOURCE_DIR}/tests/bootstrap_component.cpp)
             target_compile_options(bootstrap_component_${variant} PRIVATE /GS- /Zl)

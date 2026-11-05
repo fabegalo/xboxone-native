@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 #include "xboxone_native/inspection.h"
+#include "xboxone_native/appmodel.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -37,6 +38,15 @@ struct ServiceRequirement {
     std::string evidence; // Actual observed dependency; no guessed services.
 };
 
+struct AppModelActivation {
+    std::string manifest; // Exact resource artifact ID, never a directory search.
+    std::string application_id;
+    std::string evidence;
+};
+struct PackageBinding {
+    std::string requester, name, provider, evidence; // All manifest artifact IDs explicit.
+};
+
 struct Profile {
     std::string id;
     std::string version;
@@ -46,6 +56,8 @@ struct Profile {
     std::vector<Artifact> artifacts;
     std::vector<ImportBinding> imports;
     std::vector<ServiceRequirement> services;
+    AppModelActivation appmodel; // Empty manifest selects the existing Win32 backend.
+    std::vector<PackageBinding> packages;
 };
 
 struct Diagnostic {
@@ -85,6 +97,19 @@ struct Report {
     bool primary_thread_resumed = false;
     std::uint32_t exit_code = 0;
     bool exit_code_available = false;
+    std::string execution_model = "win32";
+    struct PackageNode {
+        std::string artifact;
+        appmodel::Manifest manifest;
+    };
+    std::vector<PackageNode> packages;
+    struct ActivationEvent {
+        std::string api;
+        std::uint32_t result = 0; // HRESULT or Win32 result; result_kind distinguishes them.
+        std::string result_kind;
+    };
+    std::vector<ActivationEvent> activation_events;
+    std::string activated_aumid;
     // Exit is not proof of app initialization, authentic rendering or dashboard boot.
 };
 
@@ -99,7 +124,10 @@ public:
     Session& operator=(const Session&) = delete;
     // Hashes every artifact and audits imports/services without executing input.
     bool prepare(const Profile& profile);
-    // One bounded run of an audited ordinary Win32 executable. The OS loader
+    // One run of an audited Win32 executable or explicit packaged-app contract.
+    // AppModel activation is synchronous; timeout bounds process observation,
+    // not the COM activation RPC. Package deployment is never performed here.
+    // The OS loader
     // owns mapping, relocation, imports, TLS/unwind and primary-thread startup.
     // Rechecks identity before launch. No shell, DLL injection, or alternate OS backend.
     bool run(std::uint32_t timeout_ms = 5000);

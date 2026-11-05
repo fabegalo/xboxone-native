@@ -1,5 +1,12 @@
 # STATUS — xboxone-native
 
+## 2026-11-05 — M1.2: contratos AppModel e backend de ativação Windows
+
+- `xboxone_systemos` distingue Win32 e AppModel. Leitura de `AppxManifest.xml` pelo Windows SDK, snapshot <=1 MiB conferido por SHA-256, XML sem DTD/resolver externo; identidade, Application ID, EntryPoint/AUMID, dependências e capacidades entram no grafo com revisão/procedência. Bindings explícitos; ambiguidades, versões, caminhos e contratos desconhecidos bloqueiam execução.
+- Backend `IApplicationActivationManager` integrado sem fallback para `CreateProcessW`. Registra HRESULT/resultados Win32, identidade/caminho do PID e eventos do protocolo próprio de início/encerramento. Fixture empacotada desktop própria compilada, sem janela/renderizador; **não é prova de UWP, WinRT de Xbox ou SystemOS**.
+- Windows x64/MSVC: **sete grupos focados aprovados**; AppModel tem 28 verificações de caminho e 16 testes Python (um caso de symlink ignorado por falta de privilégio local). Mantidas as regressões de bootstrap/grafo. API real, fora da restrição de COM: criação do ativador `S_OK`, permissão de foreground `0x80070005`, `ActivateApplication` de AUMID inexistente `0x80073CF1`. Isso comprova uma falha real, não ativação bem-sucedida.
+- **Entrega parcial quanto à execução:** Windows Sandbox indisponível neste host; o runner descartável recusou registro na instalação do usuário (`registration_attempted=false`). O executável próprio chegou pelo bootstrap à falha real de pacote não registrado. Ciclo de vida positivo/segundo modelo de execução continuam **não demonstrados**; dependências de pacote em execução, classes WinRT/UWP e componentes originais continuam bloqueados. Evidência/comandos: [M1-STATUS.md](docs/M1-STATUS.md).
+
 ## 2026-11-05 — M1.1: CI e grafo estático de dependências PE
 
 - Corrigida a validação Windows: preservar `link/..` antes da inspeção de cada ancestral, tanto no inventário quanto no fingerprint. Caminhos relativos com raiz ambígua são recusados. Fixtures do bootstrap usam a raiz temporária canonicalizada; entradas reais continuam recusando symlinks/reparse points. A CI exige cobertura de symlinks, sem transformar falta de privilégio em aprovação.

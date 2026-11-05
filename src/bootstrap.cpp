@@ -2,6 +2,7 @@
 #include "xboxone_native/bootstrap.h"
 #include "xboxone_native/inspection.h"
 #include "xboxone_native/inventory.h"
+#include "appmodel_internal.h"
 
 #include <algorithm>
 #include <fstream>
@@ -175,6 +176,14 @@ bool read_profile(const fs::path& path, Profile& profile, std::string& error) {
             row >> std::quoted(s.id) >> kind >> std::quoted(s.evidence);
             valid = service_kind(kind, s.kind);
             candidate.services.push_back(std::move(s));
+        } else if (command == "appmodel" && candidate.appmodel.manifest.empty()) {
+            row >> std::quoted(candidate.appmodel.manifest) >> std::quoted(candidate.appmodel.application_id)
+                >> std::quoted(candidate.appmodel.evidence);
+            valid = !candidate.appmodel.manifest.empty();
+        } else if (command == "package_bind") {
+            PackageBinding b;
+            row >> std::quoted(b.requester) >> std::quoted(b.name) >> std::quoted(b.provider) >> std::quoted(b.evidence);
+            candidate.packages.push_back(std::move(b));
         } else valid = false;
         if (row.fail()) valid = false;
         std::string extra;
@@ -200,11 +209,13 @@ bool Session::prepare(const Profile& profile) {
     report_.version = profile.version;
     report_.origin = profile.origin;
     report_.source_sha256 = profile.source_sha256;
+    const bool packaged = !profile.appmodel.manifest.empty();
+    report_.execution_model = packaged ? "appmodel" : "win32";
     if (!token(profile.id) || profile.version.empty() || !digest(profile.source_sha256) ||
         (profile.origin != Origin::synthetic && profile.origin != Origin::original))
         block(report_, "invalid_identity", profile.id, "profile id, exact revision and source SHA-256 are required");
     if (profile.artifacts.empty() || profile.artifacts.size() > 256 || profile.imports.size() > 4096 ||
-        profile.services.size() > 256) {
+        profile.services.size() > 256 || profile.packages.size() > 256) {
         block(report_, "manifest_limit", profile.id, "1..256 artifacts, <=4096 bindings and <=256 services required");
         return false;
     }
@@ -287,7 +298,7 @@ bool Session::prepare(const Profile& profile) {
         const auto& pe = image.pe;
         if (pe.subsystem == 1 || (pe.characteristics & 0x1000))
             block(report_, "needs_nt_kernel", a.id, "native subsystem/system image requires an isolated kernel backend evaluation");
-        else if (pe.subsystem != 3)
+        else if (pe.subsystem != 3 && !(packaged && pe.subsystem == 2))
             block(report_, "activation_model_unsupported", a.id, "only audited Win32 console activation is implemented");
         if (pe.has_delay_imports)
             block(report_, "delay_imports_unaudited", a.id, "delay imports were inspected; execution semantics remain unaudited");
@@ -418,6 +429,9 @@ bool Session::prepare(const Profile& profile) {
         (void)binding;
         if (!used.count(key)) block(report_, "unused_binding", key.first + ":" + key.second, "binding does not correspond to an inspected dependency");
     }
+    if (packaged) prepare_appmodel(profile, report_);
+    else if (!profile.packages.empty() || !profile.appmodel.application_id.empty() || !profile.appmodel.evidence.empty())
+        block(report_, "package_activation_missing", profile.id, "AppModel manifest selection required");
     std::set<std::string> service_ids;
     for (const auto& s : profile.services) {
         if (!token(s.id) || !service_ids.insert(s.id).second || s.evidence.empty())
@@ -468,6 +482,7 @@ bool Session::run(std::uint32_t timeout_ms) {
         report_.diagnostics.push_back({"prelaunch_revalidation_failed", profile_.id, "input changed or dependency no longer available"});
         return false;
     }
+    if (!profile_.appmodel.manifest.empty()) return run_appmodel(profile_, report_, timeout_ms);
 #ifdef _WIN32
     const auto entry = std::find_if(profile_.artifacts.begin(), profile_.artifacts.end(),
                                   [&](const auto& a) { return a.id == profile_.entry; });

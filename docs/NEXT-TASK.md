@@ -1,5 +1,15 @@
 # Próxima tarefa — M1: ativação de um componente original legível
 
+## Pendência imediata — concluir a prova AppModel M1.2
+
+Contratos Appx/grafo e backend Windows estão implementados; **a ativação positiva ainda não foi demonstrada**. O host não dispõe de Windows Sandbox/guest descartável e o runner recusou registrar pacotes na instalação do usuário. Falha real de `ActivateApplication` (`0x80073CF1`) e leitura de manifesto não cumprem o segundo modelo de execução. Evidência e comando opt-in em [M1-STATUS.md](M1-STATUS.md).
+
+1. Em guest descartável Windows x64, conta não elevada com deployment de desenvolvimento oficial disponível, executar `tests/appmodel_disposable_test.py` com o bootstrap e `appmodel_component` compilados. Exigir `activation_verified=true`, HRESULT `S_OK`, PID com identidade/caminho conferidos, eventos started/stop/finished, exit 0 e `cleanup_verified=true`. Não registrar no host nem habilitar políticas/instalar certificados para contornar o bloqueio.
+2. Validar os ramos positivos e de timeout/encerramento do backend nesse ambiente. Só então declarar um segundo modelo de execução; a fixture é desktop empacotada própria, não prova de UWP ou SystemOS.
+3. Pacotes com dependências, classes WinRT/UWP, serviços/capacidades Xbox e origem original continuam bloqueados. Estender somente um contrato observado, incluindo conferência do grafo registrado por identidade/versão/hash antes de autorizar dependências.
+
+O objetivo original abaixo permanece: primeira imagem autêntica da dashboard, com código e recursos originais da mesma revisão. Não repetir inspeção PE/OSU nem interferir na apresentação paralela.
+
 Estado em **2026-11-05**: M1.1 entrega inspeção de imports normais/atrasados, exports/forwarders, API Sets e recursos de ativação disponíveis, integrada ao JSON determinístico de `xboxone-systemos prepare`. A identidade e a revisão de cada provedor precisam ser verificadas; presença de export não autoriza sua execução. Oito grupos afetados passaram no Windows; CI aprovada em Windows (9/9), Linux (7/7) e macOS (7/7), run [41960184838](https://github.com/fabegalo/xboxone-native/actions/runs/41960184838), commit `4b336b5`, incluindo a cobertura obrigatória de symlinks. Evidência e limites em [M1-STATUS.md](M1-STATUS.md).
 
 Os arquivos do OSU2 continuam expondo somente contêineres XVD, sem componente original diretamente legível. Nenhum boot, ativação original ou frame autêntico demonstrado. O próximo trabalho depende desse insumo; não repetir infraestrutura sintética aprovada nem pesquisas de criptografia já concluídas.
