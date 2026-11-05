@@ -210,6 +210,7 @@ bool Session::prepare(const Profile& profile) {
     }
     std::map<std::string, const Artifact*> artifacts;
     std::map<std::string, inspection::Report> images;
+    std::set<std::string> ambiguous_artifacts;
     std::set<fs::path> paths;
     std::uint64_t total_bytes = 0;
     std::size_t metadata_records = 0, metadata_bytes = 0;
@@ -218,6 +219,7 @@ bool Session::prepare(const Profile& profile) {
         const auto identity_errors = report_.diagnostics.size();
         auto& node = report_.nodes.emplace_back(DependencyNode{a, "identity_rejected", {}});
         if (!token(a.id) || !artifacts.emplace(a.id, &a).second) {
+            ambiguous_artifacts.insert(a.id);
             block(report_, "ambiguous_artifact", a.id, "invalid or duplicate artifact id");
             continue;
         }
@@ -298,6 +300,13 @@ bool Session::prepare(const Profile& profile) {
                                     !(pe.characteristics & 2) || pe.entry_point_rva == 0))
             block(report_, "entry_not_executable", a.id, "entry must be a PE executable with a real entry point, not a DLL");
         images.emplace(a.id, std::move(image));
+    }
+    // A duplicate ID invalidates every candidate, including the first record.
+    // Never publish a selected export from an ambiguous manifest identity.
+    for (const auto& id : ambiguous_artifacts) images.erase(id);
+    for (auto& node : report_.nodes) if (ambiguous_artifacts.count(node.artifact.id)) {
+        node.status = "ambiguous_artifact";
+        node.pe = {};
     }
     const auto found_entry = artifacts.find(profile.entry);
     if (found_entry == artifacts.end() || found_entry->second->role != Role::executable || !images.count(profile.entry))
@@ -430,7 +439,8 @@ bool Session::prepare(const Profile& profile) {
     if (!native_host())
         block(report_, "native_backend_unavailable", profile.id, "execution implemented only for native Windows AMD64");
     std::sort(report_.nodes.begin(), report_.nodes.end(), [](const auto& a, const auto& b) {
-        return std::tie(a.artifact.id, a.artifact.sha256, a.status) < std::tie(b.artifact.id, b.artifact.sha256, b.status);
+        return std::tie(a.artifact.id, a.artifact.version, a.artifact.sha256, a.artifact.path, a.artifact.provenance, a.artifact.role, a.status) <
+               std::tie(b.artifact.id, b.artifact.version, b.artifact.sha256, b.artifact.path, b.artifact.provenance, b.artifact.role, b.status);
     });
     const auto edge_key = [](const auto& d) { return std::tie(d.requester, d.kind, d.library, d.symbol, d.by_ordinal, d.provider, d.status); };
     std::sort(report_.dependencies.begin(), report_.dependencies.end(), [&](const auto& a, const auto& b) { return edge_key(a) < edge_key(b); });

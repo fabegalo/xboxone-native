@@ -278,7 +278,7 @@ bool parse_pe(Reader& file, Report& report, std::string& error) {
             };
             const auto name = view.string(address(delay ? 4 : 12));
             if (!name || !library_name(*name)) return fail("invalid imported library name");
-            Import imported{*name, {}, delay, is_api_set(*name)};
+            Import imported{*name, {}, delay, is_api_set(*name), {}};
             auto table = address(delay ? 16 : 0);
             const auto iat = address(delay ? 12 : 16);
             if (!table && !delay) table = iat;

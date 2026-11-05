@@ -107,7 +107,7 @@ class Dependencies(unittest.TestCase):
         self.assertEqual(path.read_bytes(), data)
         return json.loads(result.stdout) if valid else result.stderr
 
-    def prepare(self, files, bindings, versions=None, reverse=False, hashes=None):
+    def prepare(self, files, bindings, versions=None, reverse=False, hashes=None, duplicate_ids=()):
         rows = ['xboxone-systemos-v1', 'profile "own" "revision-1" synthetic "' + "a" * 64 + '"', 'entry "entry"']
         records = []
         for id, data in files.items():
@@ -116,6 +116,7 @@ class Dependencies(unittest.TestCase):
             version = (versions or {}).get(id, "revision-1")
             records.append(f'artifact {quote(id)} {quote(version)} {quote(path.as_posix())} '
                            f'"{(hashes or {}).get(id, hashlib.sha256(data).hexdigest())}" {"executable" if id == "entry" else "module"} "own fixture"')
+        records += [records[list(files).index(id)] for id in duplicate_ids]
         records += [f'bind {quote(id)} {quote(lib)} {quote(provider)} "own audited fixture"' for id, lib, provider in bindings]
         rows += list(reversed(records)) if reverse else records
         profile = self.root / "profile.txt"
@@ -292,6 +293,14 @@ class Dependencies(unittest.TestCase):
                 bindings.append((f"m{n}", f"m{n+1}.dll", f"artifact:m{n+1}"))
         report = self.prepare(files, bindings)
         self.assertIn("dependency_graph_limit", [d["code"] for d in report["diagnostics"]])
+
+    def test_duplicate_artifact_never_selects_first_provider(self):
+        files = {"entry": image(imports=[("a.dll", ["Start"], False)]), "a": image(exports=[(["Start"], None)])}
+        bindings = [("entry", "a.dll", "artifact:a")]
+        report = self.prepare(files, bindings, duplicate_ids=("a",))
+        self.assertEqual(report, self.prepare(files, bindings, duplicate_ids=("a",), reverse=True))
+        self.assertEqual(report["dependencies"][0]["status"], "private_identity_unverified")
+        self.assertTrue(all(n["status"] == "ambiguous_artifact" and n["pe"] is None for n in report["nodes"] if n["id"] == "a"))
 
 
 if __name__ == "__main__":

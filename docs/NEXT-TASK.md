@@ -1,6 +1,6 @@
 # Próxima tarefa — M1: ativação de um componente original legível
 
-Estado em **2026-11-05**: M1.1 entrega inspeção de imports normais/atrasados, exports/forwarders, API Sets e recursos de ativação disponíveis, integrada ao JSON determinístico de `xboxone-systemos prepare`. A identidade e a revisão de cada provedor precisam ser verificadas; presença de export não autoriza sua execução. Oito grupos afetados passaram no Windows; CI dos três sistemas aguardando execução do commit M1.1. Evidência e limites em [M1-STATUS.md](M1-STATUS.md).
+Estado em **2026-11-05**: M1.1 entrega inspeção de imports normais/atrasados, exports/forwarders, API Sets e recursos de ativação disponíveis, integrada ao JSON determinístico de `xboxone-systemos prepare`. A identidade e a revisão de cada provedor precisam ser verificadas; presença de export não autoriza sua execução. Oito grupos afetados passaram no Windows; CI aprovada em Windows (9/9), Linux (7/7) e macOS (7/7), run [41960184838](https://github.com/fabegalo/xboxone-native/actions/runs/41960184838), commit `4b336b5`, incluindo a cobertura obrigatória de symlinks. Evidência e limites em [M1-STATUS.md](M1-STATUS.md).
 
 Os arquivos do OSU2 continuam expondo somente contêineres XVD, sem componente original diretamente legível. Nenhum boot, ativação original ou frame autêntico demonstrado. O próximo trabalho depende desse insumo; não repetir infraestrutura sintética aprovada nem pesquisas de criptografia já concluídas.
 
