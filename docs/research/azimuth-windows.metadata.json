@@ -1,0 +1,630 @@
+{
+  "schema_version": 1,
+  "study_date": "2026-11-04",
+  "method": "ZIP members read in memory; PE metadata and import tables inspected statically. No archive members extracted or executed. No signature verification.",
+  "source_name": "azimuth-windows.zip",
+  "zip_size": 6835590,
+  "zip_sha256": "f0e603a4548ae7c40c1cef584ce691dbeae0bc178666bed896ab87ab6cd52994",
+  "files": [
+    {
+      "path": "azimuth.exe",
+      "size": 8613376,
+      "sha256": "56d2c9cb6ccf3ae1836dee9676b64285f3a247efa2d12cf02c6c742696b3b092",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 2,
+        "tls_directory": true,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".rdata",
+          ".data",
+          ".pdata",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "USER32.dll",
+            "symbol_count": 58
+          },
+          {
+            "library": "GDI32.dll",
+            "symbol_count": 4
+          },
+          {
+            "library": "DWrite.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "SHELL32.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "ole32.dll",
+            "symbol_count": 8
+          },
+          {
+            "library": "api-ms-win-core-winrt-string-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "api-ms-win-core-winrt-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "DINPUT8.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "d3d12.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "dxgi.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "bcrypt.dll",
+            "symbol_count": 5
+          },
+          {
+            "library": "api-ms-win-core-synch-l1-2-0.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "WINMM.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 201
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/avcodec-62.dll",
+      "size": 492544,
+      "sha256": "c439b47af4780a800ff20379bb313d0fd2902e8cadacaafacdb81813311394c7",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 3,
+        "tls_directory": true,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".data",
+          ".rdata",
+          ".pdata",
+          ".xdata",
+          ".bss",
+          ".edata",
+          ".idata",
+          ".tls",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 24
+          },
+          {
+            "library": "api-ms-win-crt-environment-l1-1-0.dll",
+            "symbol_count": 2
+          },
+          {
+            "library": "api-ms-win-crt-heap-l1-1-0.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "api-ms-win-crt-math-l1-1-0.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "api-ms-win-crt-private-l1-1-0.dll",
+            "symbol_count": 2
+          },
+          {
+            "library": "api-ms-win-crt-runtime-l1-1-0.dll",
+            "symbol_count": 17
+          },
+          {
+            "library": "api-ms-win-crt-stdio-l1-1-0.dll",
+            "symbol_count": 5
+          },
+          {
+            "library": "api-ms-win-crt-string-l1-1-0.dll",
+            "symbol_count": 4
+          },
+          {
+            "library": "api-ms-win-crt-time-l1-1-0.dll",
+            "symbol_count": 4
+          },
+          {
+            "library": "api-ms-win-crt-utility-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "avutil-60.dll",
+            "symbol_count": 141
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/avutil-60.dll",
+      "size": 971264,
+      "sha256": "22a5a7c70ec3541ad5e50aa973c438b66de4516002c90e1caa396ef29e4153af",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 3,
+        "tls_directory": true,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".data",
+          ".rdata",
+          ".pdata",
+          ".xdata",
+          ".bss",
+          ".edata",
+          ".idata",
+          ".tls",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "bcrypt.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 36
+          },
+          {
+            "library": "api-ms-win-crt-convert-l1-1-0.dll",
+            "symbol_count": 5
+          },
+          {
+            "library": "api-ms-win-crt-environment-l1-1-0.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "api-ms-win-crt-filesystem-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "api-ms-win-crt-heap-l1-1-0.dll",
+            "symbol_count": 6
+          },
+          {
+            "library": "api-ms-win-crt-math-l1-1-0.dll",
+            "symbol_count": 22
+          },
+          {
+            "library": "api-ms-win-crt-private-l1-1-0.dll",
+            "symbol_count": 7
+          },
+          {
+            "library": "api-ms-win-crt-runtime-l1-1-0.dll",
+            "symbol_count": 17
+          },
+          {
+            "library": "api-ms-win-crt-stdio-l1-1-0.dll",
+            "symbol_count": 15
+          },
+          {
+            "library": "api-ms-win-crt-string-l1-1-0.dll",
+            "symbol_count": 10
+          },
+          {
+            "library": "api-ms-win-crt-time-l1-1-0.dll",
+            "symbol_count": 9
+          },
+          {
+            "library": "api-ms-win-crt-utility-l1-1-0.dll",
+            "symbol_count": 3
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/azimuth-mark.png",
+      "size": 181979,
+      "sha256": "84ec13bc93b7386cb74783ad51d7720e88b6c887e7b0908bbbfd4e76d2087b5f"
+    },
+    {
+      "path": "data/bin/azimuth-tls-1.dll",
+      "size": 6144,
+      "sha256": "c672413a9b068bbe789ecd6a5bd86c0548719e7e4bec72948fad9021f205107c",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 2,
+        "tls_directory": true,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".rdata",
+          ".data",
+          ".pdata",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 1
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/azimuth-tls-2.dll",
+      "size": 6144,
+      "sha256": "dac7202cdf9643172b5100ab7ee83b126b24ceab58c7208501b22dd86732c547",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 2,
+        "tls_directory": true,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".rdata",
+          ".data",
+          ".pdata",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 1
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/azimuth.pipelines",
+      "size": 11389290,
+      "sha256": "442eb4627b2556ce791022744fd52f8115446766892b24e37b0e9f2e481b76f0"
+    },
+    {
+      "path": "data/bin/concrt140.dll",
+      "size": 374200,
+      "sha256": "54716f0738af891f283d213b5c8d11b25896bb8ee3097d301eae718560cf974e",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 3,
+        "tls_directory": false,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".rdata",
+          ".data",
+          ".pdata",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "MSVCP140.dll",
+            "symbol_count": 15
+          },
+          {
+            "library": "VCRUNTIME140_1.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "VCRUNTIME140.dll",
+            "symbol_count": 13
+          },
+          {
+            "library": "api-ms-win-crt-heap-l1-1-0.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "api-ms-win-crt-math-l1-1-0.dll",
+            "symbol_count": 2
+          },
+          {
+            "library": "api-ms-win-crt-runtime-l1-1-0.dll",
+            "symbol_count": 11
+          },
+          {
+            "library": "api-ms-win-crt-string-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "api-ms-win-crt-stdio-l1-1-0.dll",
+            "symbol_count": 4
+          },
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 64
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/fonts/DejaVuSans-Check.ttf",
+      "size": 13548,
+      "sha256": "5777ac7a372ddbd48c895736fa968c8b7d44662f7761bcdae9573b3aba33d175"
+    },
+    {
+      "path": "data/bin/fonts/Montserrat-300.ttf",
+      "size": 373996,
+      "sha256": "5e6b96d7ca898cae2f62d98dba7c62e206e4c4b902de5dfd02d431614b661bc1"
+    },
+    {
+      "path": "data/bin/fonts/Montserrat-400.ttf",
+      "size": 374180,
+      "sha256": "18237c1e1821ba07225a4cba97247c8b1d80d8b81943263d567fe14934c64144"
+    },
+    {
+      "path": "data/bin/fonts/Montserrat-500.ttf",
+      "size": 373984,
+      "sha256": "d5571a54ddd675480c63fb887a534f3d35d16527f7424c9202d023e76fb94fd6"
+    },
+    {
+      "path": "data/bin/fonts/Montserrat-600.ttf",
+      "size": 374288,
+      "sha256": "b6776674be05daad3f700232974be9d09d0a418b29582df26e740df02a88cc79"
+    },
+    {
+      "path": "data/bin/fonts/Montserrat-650.ttf",
+      "size": 374364,
+      "sha256": "69cb358ae94c99ba11d157c25f97aa779b8dcd869290e23c5d58fca187d8654e"
+    },
+    {
+      "path": "data/bin/fonts/Montserrat-700.ttf",
+      "size": 374316,
+      "sha256": "c5d8b7648b8b990a5311912c9fe9864bab7290b7a1f8f5201f0b1bd144ad8731"
+    },
+    {
+      "path": "data/bin/fonts/Montserrat-750-Italic.ttf",
+      "size": 384244,
+      "sha256": "6f0b32ca8f1be8cf37310d0960a28a8a4747588b56705969c6759bfd5fcbe092"
+    },
+    {
+      "path": "data/bin/fonts/Montserrat-750.ttf",
+      "size": 374256,
+      "sha256": "6b357777ef3fcc94f4360c2db504d3c559f2e63dd84df169e47827d0aca59eb1"
+    },
+    {
+      "path": "data/bin/msvcp110.dll",
+      "size": 680032,
+      "sha256": "dd8377b03ba5ba21251ab8e4eebf9b8a9624b59aebcdfc1be078c6513db1640d",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 2,
+        "tls_directory": false,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".rdata",
+          ".data",
+          ".pdata",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "MSVCR110.dll",
+            "symbol_count": 165
+          },
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 41
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/msvcp140.dll",
+      "size": 643512,
+      "sha256": "7c26614e1d733892c2deac7e245ce115504b1d80592dd0a01b08e3e5a55f89ca",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 3,
+        "tls_directory": false,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".rdata",
+          ".data",
+          ".pdata",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "VCRUNTIME140.dll",
+            "symbol_count": 17
+          },
+          {
+            "library": "VCRUNTIME140_1.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "api-ms-win-crt-heap-l1-1-0.dll",
+            "symbol_count": 5
+          },
+          {
+            "library": "api-ms-win-crt-runtime-l1-1-0.dll",
+            "symbol_count": 16
+          },
+          {
+            "library": "api-ms-win-crt-string-l1-1-0.dll",
+            "symbol_count": 9
+          },
+          {
+            "library": "api-ms-win-crt-locale-l1-1-0.dll",
+            "symbol_count": 10
+          },
+          {
+            "library": "api-ms-win-crt-stdio-l1-1-0.dll",
+            "symbol_count": 21
+          },
+          {
+            "library": "api-ms-win-crt-filesystem-l1-1-0.dll",
+            "symbol_count": 6
+          },
+          {
+            "library": "api-ms-win-crt-time-l1-1-0.dll",
+            "symbol_count": 8
+          },
+          {
+            "library": "api-ms-win-crt-environment-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "api-ms-win-crt-math-l1-1-0.dll",
+            "symbol_count": 11
+          },
+          {
+            "library": "api-ms-win-crt-convert-l1-1-0.dll",
+            "symbol_count": 4
+          },
+          {
+            "library": "api-ms-win-crt-utility-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 75
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/msvcr110.dll",
+      "size": 847448,
+      "sha256": "0b3ec2efbdd40f01326e993449a4cee5bf7e709c98f5c2920dbf1c4d983e8221",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 2,
+        "tls_directory": false,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".rdata",
+          ".data",
+          ".pdata",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 194
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/vcruntime140.dll",
+      "size": 178616,
+      "sha256": "d1f4225df2cd877dbf130d5668a021dce3f94118455ff5ec952061c30afc9ce7",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 3,
+        "tls_directory": false,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          "fothk",
+          ".rdata",
+          ".data",
+          ".pdata",
+          "_RDATA",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "api-ms-win-crt-runtime-l1-1-0.dll",
+            "symbol_count": 2
+          },
+          {
+            "library": "api-ms-win-crt-heap-l1-1-0.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "api-ms-win-crt-string-l1-1-0.dll",
+            "symbol_count": 2
+          },
+          {
+            "library": "api-ms-win-crt-stdio-l1-1-0.dll",
+            "symbol_count": 2
+          },
+          {
+            "library": "api-ms-win-crt-convert-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 25
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/bin/vcruntime140_1.dll",
+      "size": 50112,
+      "sha256": "a7146c08f89fe5b04541ab507cdb59ff7b44534d4ba3c668a426c6450a03434e",
+      "pe": {
+        "machine": "0x8664",
+        "format": "pe64",
+        "subsystem": 3,
+        "tls_directory": false,
+        "delay_import_directory": false,
+        "section_names": [
+          ".text",
+          ".rdata",
+          ".data",
+          ".pdata",
+          ".rsrc",
+          ".reloc"
+        ],
+        "imports": [
+          {
+            "library": "api-ms-win-crt-runtime-l1-1-0.dll",
+            "symbol_count": 2
+          },
+          {
+            "library": "api-ms-win-crt-heap-l1-1-0.dll",
+            "symbol_count": 3
+          },
+          {
+            "library": "api-ms-win-crt-string-l1-1-0.dll",
+            "symbol_count": 1
+          },
+          {
+            "library": "VCRUNTIME140.dll",
+            "symbol_count": 5
+          },
+          {
+            "library": "KERNEL32.dll",
+            "symbol_count": 16
+          }
+        ]
+      }
+    },
+    {
+      "path": "data/licenses.txt",
+      "size": 37343,
+      "sha256": "1ab64b3f7ab71f7b9fe4511e7993c5897ddb3153da9c041ec50d5dd0d047ccc3"
+    }
+  ]
+}

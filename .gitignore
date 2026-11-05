@@ -11,6 +11,8 @@ CMakeUserPresets.json
 *.log
 *.tmp
 .DS_Store
+__pycache__/
+*.pyc
 
 # Content must stay outside the source tree
 *.xvd

@@ -35,6 +35,8 @@ HostOS, SystemOS, GameOS/ERA e GameCore não são equivalentes. x86-64 no PC nã
 
 ## Commits e manutenção
 
+- **Documentação:** desenvolvimento e evidências novas vão para `STATUS.md`, `docs/M*-STATUS.md` e `docs/NEXT-TASK.md`. Não editar READMEs, `AGENTS.md` ou `CLAUDE.md` por milestone. Só mudar documentos estáveis se a própria regra de produto, arquitetura permanente ou uso público mudar de verdade.
+
 Usar Conventional Commits (`feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`). Não adicionar coautoria ou assinaturas atribuídas a assistentes, nem frases “Generated with…”; preservar licenças e créditos humanos reais. Commits diretos na `main` somente quando houver autorização para a tarefa e testes pertinentes. Não fazer force-push ou reescrever histórico publicado. Evitar arquivos e relatórios duplicados; atualizar a fonte canônica.
 
 **Arquivos principais:** `README.md` (EN), `README.pt-BR.md` (PT-BR), `STATUS.md` (evidência atual), `docs/M0.md` (decisão técnica e próximo bloqueio), `docs/README.md` (índice), `CLAUDE.md` (instruções detalhadas). README e STATUS devem descrever somente o que foi demonstrado.

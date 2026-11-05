@@ -218,28 +218,43 @@ bool parse_pe(Reader& file, Report& report, std::string& error) {
 }
 
 bool parse_xvd(Reader& file, Report& report, std::string& error) {
-    // XVD has a 0x200-byte signature area followed by the 'MSFT-XVD' header.
+    // XVD has a 0x200-byte signature area followed by the 'msft-xvd' header.
     // This is identification ONLY; an authentic signature is NOT verified.
-    if (file.size() < 0xe00) {
-        error = "truncated XVD header (requires at least 0xE00 bytes)";
+    std::array<std::uint8_t, xvd_probe_size> prefix{};
+    if (!file.read(0, prefix)) {
+        error = "truncated XVD metadata prefix (requires at least 0xE00 bytes)";
         return false;
     }
-    std::array<std::uint8_t, 0x2a0> header{};
-    if (!file.read(0x200, header) ||
-        std::string_view(reinterpret_cast<const char*>(header.data()), 8) != "MSFT-XVD") {
+    return inspect_xvd_prefix(prefix, file.size(), report, error);
+}
+
+} // namespace
+
+bool inspect_xvd_prefix(std::span<const std::uint8_t> prefix, std::uint64_t declared_file_size,
+                        Report& report, std::string& error) {
+    report = {};
+    error.clear();
+    if (prefix.size() < xvd_probe_size || declared_file_size < prefix.size()) {
+        error = "truncated XVD metadata prefix or inconsistent declared file size";
+        return false;
+    }
+    const auto* header = prefix.data() + 0x200;
+    if (std::string_view(reinterpret_cast<const char*>(header), 8) != "msft-xvd") {
         error = "invalid XVD magic";
         return false;
     }
     report.kind = Kind::xvd;
-    report.xvd.format_version = u32(header.data() + 0x0c);
-    report.xvd.declared_drive_size = u64(header.data() + 0x18);
-    report.xvd.content_type = u32(header.data() + 0x84);
-    report.xvd.block_size = u32(header.data() + 0x98);
-    report.xvd.required_system_version = u64(header.data() + 0x294);
+    report.file_size = declared_file_size;
+    report.xvd.volume_flags = u32(header + 0x08);
+    report.xvd.format_version = u32(header + 0x0c);
+    report.xvd.created_filetime_raw = u64(header + 0x10);
+    report.xvd.declared_drive_size = u64(header + 0x18);
+    report.xvd.content_type = u32(header + 0x84);
+    report.xvd.block_size = u32(header + 0x98);
+    report.xvd.package_version_raw = u64(header + 0x1bc);
+    report.xvd.required_system_version = u64(header + 0x294);
     return true;
 }
-
-} // namespace
 
 bool inspect(const std::filesystem::path& path, Report& report, std::string& error) {
     error.clear();
@@ -256,7 +271,7 @@ bool inspect(const std::filesystem::path& path, Report& report, std::string& err
     }
     std::array<std::uint8_t, 8> magic{};
     if (file.read(0x200, magic) &&
-        std::string_view(reinterpret_cast<const char*>(magic.data()), 8) == "MSFT-XVD") {
+        std::string_view(reinterpret_cast<const char*>(magic.data()), 8) == "msft-xvd") {
         return parse_xvd(file, report, error);
     }
     error = "unsupported input (expected PE32+ x86-64 or XVD header)";

@@ -66,13 +66,16 @@ std::vector<std::uint8_t> pe64() {
 
 std::vector<std::uint8_t> xvd() {
     std::vector<std::uint8_t> b(0xe00);
-    constexpr char magic[] = "MSFT-XVD";
+    constexpr char magic[] = "msft-xvd";
     for (std::size_t i = 0; i < 8; ++i) b[0x200 + i] = static_cast<std::uint8_t>(magic[i]);
     put32(b, 0x20c, 3);        // format version
+    put32(b, 0x208, 9);        // read-only, legacy sector size; encryption not disabled
+    put64(b, 0x210, 123456789); // synthetic FILETIME
     put64(b, 0x218, 0x40000);  // declared drive size
     put32(b, 0x284, 1);        // content type
     put32(b, 0x298, 0xaa000);  // block size
     put64(b, 0x494, 10586);    // raw required system version
+    put64(b, 0x3bc, 0x800a000065f425afULL); // synthetic opaque package version
     return b;
 }
 
@@ -105,6 +108,19 @@ int main() {
     check(report.kind == xboxone::inspection::Kind::xvd, "XVD classification");
     check(report.xvd.block_size == 0xaa000 && report.xvd.format_version == 3, "XVD metadata");
     check(report.xvd.required_system_version == 10586, "XVD required version field");
+    check(report.xvd.volume_flags == 9 && report.xvd.created_filetime_raw == 123456789 &&
+          report.xvd.package_version_raw == 0x800a000065f425afULL, "XVD provenance metadata");
+    check(xboxone::inspection::inspect_xvd_prefix(x, 0x100000000ULL, report, err) &&
+          report.file_size == 0x100000000ULL, "in-memory prefix preserves caller-declared 64-bit size");
+    check(!xboxone::inspection::inspect_xvd_prefix(x, 100, report, err), "reject inconsistent archive size");
+    check(!xboxone::inspection::inspect_xvd_prefix(std::span(x).first(0x400), 0x1000, report, err), "reject short archive prefix");
+    {
+        auto invalid = x;
+        const std::string uppercase = "MSFT-XVD";
+        for (std::size_t i = 0; i < uppercase.size(); ++i) invalid[0x200 + i] = static_cast<std::uint8_t>(uppercase[i]);
+        write_file(dir / "uppercase.xvd", invalid);
+        check(!xboxone::inspection::inspect(dir / "uppercase.xvd", report, err), "reject incorrect uppercase XVD magic");
+    }
     {
         auto invalid = pe;
         put16(invalid, 0x84, 0x14c);

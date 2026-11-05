@@ -5,6 +5,7 @@ option(XBOXONE_NATIVE_BUILD_TESTS "Build M0 regression tests" ON)
 
 add_library(xboxone_inspection STATIC
     src/inspection.cpp
+    src/inventory.cpp
 )
 target_include_directories(xboxone_inspection PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -24,5 +25,18 @@ if(XBOXONE_NATIVE_BUILD_TESTS)
     add_executable(xboxone_inspection_tests tests/inspection_tests.cpp)
     target_link_libraries(xboxone_inspection_tests PRIVATE xboxone_inspection)
     add_test(NAME inspection_regressions COMMAND xboxone_inspection_tests)
+    add_executable(xboxone_inventory_tests tests/inventory_tests.cpp)
+    target_include_directories(xboxone_inventory_tests PRIVATE src)
+    target_link_libraries(xboxone_inventory_tests PRIVATE xboxone_inspection)
+    add_test(NAME inventory_regressions COMMAND xboxone_inventory_tests)
     add_test(NAME cli_help COMMAND xboxone-native --help)
+    find_package(Python3 QUIET COMPONENTS Interpreter)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME update_zip_and_cli_regressions
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/update_zip_tests.py"
+                    $<TARGET_FILE:xboxone-native>)
+        add_test(NAME systemos_preflight_regressions
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/systemos_preflight_tests.py"
+                    $<TARGET_FILE:xboxone-native>)
+    endif()
 endif()

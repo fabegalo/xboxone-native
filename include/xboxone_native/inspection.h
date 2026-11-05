@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -25,11 +26,14 @@ struct PeInfo {
 };
 
 struct XvdInfo {
+    std::uint32_t volume_flags = 0;
     std::uint32_t format_version = 0;
     std::uint32_t content_type = 0;
     std::uint32_t block_size = 0;
     std::uint64_t declared_drive_size = 0;
     std::uint64_t required_system_version = 0;
+    std::uint64_t package_version_raw = 0;
+    std::uint64_t created_filetime_raw = 0;
 };
 
 struct Report {
@@ -42,5 +46,12 @@ struct Report {
 // No execution, decryption, signature validation, or writes to the input.
 // false means error contains a specific reason; report is not trustworthy then.
 bool inspect(const std::filesystem::path& path, Report& report, std::string& error);
+
+// Archive adapters can supply this bounded prefix without extracting the XVD.
+// This probes metadata only, not the entire signed header or the payload. The
+// original size is declared by the caller and has not been independently read.
+inline constexpr std::size_t xvd_probe_size = 0xe00;
+bool inspect_xvd_prefix(std::span<const std::uint8_t> prefix, std::uint64_t declared_file_size,
+                        Report& report, std::string& error);
 
 } // namespace xboxone::inspection

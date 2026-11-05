@@ -18,7 +18,9 @@ A execução x86-64 direta é preferida quando comprovada. A arquitetura deve su
 - **Não há** shell original executado, primeira imagem, dashboard, Guide, importador, sistema de perfis, jogos, renderizadores Xbox/Native, GameOS funcional ou Release para usuário.
 - O build SystemOS `10.0.10586.1029` aparece no material de pesquisa como **referência de inspeção**, não como primeiro alvo funcional escolhido. Não afirmar facilidade ou bootabilidade por esse número.
 
-Atualize `STATUS.md` **somente** após mudança e evidência que alterem o estado. Para decisões e bloqueios específicos, mantenha `docs/M0.md` ou documento canônico de marco posterior; não abrir uma nova cópia de relatório a cada tentativa. READMEs EN/PT-BR devem permanecer consistentes.
+- **Documentação:** desenvolvimento e evidências novas vão para `STATUS.md`, `docs/M*-STATUS.md` e `docs/NEXT-TASK.md`. Não editar READMEs, `AGENTS.md` ou este arquivo por milestone. Só mudar documentos estáveis se a própria regra de produto, arquitetura permanente ou uso público mudar de verdade.
+
+Atualize `STATUS.md` **somente** após mudança e evidência que alterem o estado. Registre evidências do marco em `docs/M*-STATUS.md` e próximos passos em `docs/NEXT-TASK.md`, mantendo uma fonte canônica por assunto, sem nova cópia de relatório a cada tentativa. READMEs EN/PT-BR devem permanecer consistentes quando houver mudança real de uso público.
 
 ## Arquitetura de referência e limites
 
@@ -87,7 +89,7 @@ Renderizadores futuros: `Xbox` (fidelidade do console, caminho de referência, s
 3. Implementar o mínimo correto, sem stubs com sucesso fictício e sem gerar cópias grandes ou documentação redundante.
 4. Compilar **somente** os targets alterados, se houver mudanças de código. Usar testes sintéticos/focados. **Não rodar a suíte inteira por padrão**, nem sessões gráficas ou jogos sem necessidade e autorização.
 5. Se o build falhar, não usar binário antigo para validar. Se faltar acesso ao sistema/arquivo original, registrar o bloqueio e validar apenas a parte sintética, sem afirmar boot.
-6. Documentar comandos, ambiente, evidências e limitações com precisão; atualizar o arquivo canônico relevante e sincronizar ambos READMEs quando mudar o estado público.
+6. Documentar comandos, ambiente, evidências e limitações com precisão em `STATUS.md`, `docs/M*-STATUS.md` e `docs/NEXT-TASK.md`. Não sincronizar READMEs ou instruções permanentes por avanço de milestone; alterá-los somente quando mudar de verdade uma regra de produto, arquitetura permanente ou uso público.
 7. Conventional Commit objetivo, sem créditos artificiais a agentes. Com autorização para o escopo e alteração da `main`, gravar nela sem PR; preservar branch/head e nunca usar force-push automático. **Não publicar Release sem autorização expressa.**
 
 **Regras de interação dos agentes (herdadas da filosofia x360-native):** Computer Use requer autorização explícita; teste visual real e sessão longa de dashboard/jogos precisam de necessidade e autorização prévia; processos em segundo plano são supervisionados e limitados; se uma ferramenta exigir interação não autorizada, interromper esse passo e comunicar o bloqueio; não ampliar o escopo antes de concluir a tarefa atual.
@@ -108,4 +110,4 @@ Em Windows com gerador multiconfiguração, normalmente `build\\Release\\xboxone
 
 Ainda falta um **componente original do SystemOS, legível e legitimamente acessível**, com módulos e recursos compatíveis de mesma versão. O passo incremental planejado no [docs/M0.md](docs/M0.md) é inventário seguro somente leitura + hashes + grafo de dependências explícito e teste sintético de ativação (sem atribuir imagens à Microsoft). Não avançar para o marco de primeira imagem como se esse insumo já estivesse disponível.
 
-Não transformar documentação de ambição em prova de funcionalidade. A versão vigente é a implementação inspecionada na `main`; este documento precisa acompanhar as evidências posteriores.
+Não transformar documentação de ambição em prova de funcionalidade. A versão vigente é a implementação inspecionada na `main`; evidências posteriores pertencem aos arquivos de acompanhamento definidos na regra de documentação, sem atualização deste documento por milestone.
