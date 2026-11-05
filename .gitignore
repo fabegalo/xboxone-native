@@ -1,0 +1,27 @@
+# Single-source, out-of-tree CMake builds
+/build/
+/build-*/
+/out/
+/.vs/
+/.idea/
+/.vscode/
+CMakeUserPresets.json
+*.user
+*.suo
+*.log
+*.tmp
+.DS_Store
+
+# Content must stay outside the source tree
+*.xvd
+*.xvc
+*.vbi
+*.iso
+*.img
+*.bin
+*.appx
+*.msix
+*.exe
+*.dll
+*.dylib
+*.so
