@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1440" height="440" viewBox="0 0 1440 440" role="img" aria-labelledby="title desc">
+  <title id="title">xboxone-native — experimental Xbox One compatibility platform</title>
+  <desc id="desc">Original abstract illustration of a system chip, native PC execution and separate SystemOS and GameOS paths. Concept art, not an Xbox One dashboard screenshot.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#061216"/><stop offset=".55" stop-color="#0b2627"/><stop offset="1" stop-color="#041116"/></linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#32eea0" stop-opacity="0"/><stop offset=".48" stop-color="#68ffd0"/><stop offset="1" stop-color="#26cc8a" stop-opacity=".12"/></linearGradient>
+    <linearGradient id="board" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#163c3b"/><stop offset="1" stop-color="#0b1b23"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#3cfba8" stop-opacity=".28"/><stop offset="1" stop-color="#3cfba8" stop-opacity="0"/></radialGradient>
+    <pattern id="dots" width="25" height="25" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.15" fill="#69e7b4" opacity=".13"/></pattern>
+    <filter id="blur"><feGaussianBlur stdDeviation="19"/></filter>
+    <filter id="soft"><feGaussianBlur stdDeviation="4"/></filter>
+  </defs>
+  <rect width="1440" height="440" rx="23" fill="url(#bg)"/>
+  <rect width="1440" height="440" rx="23" fill="url(#dots)"/>
+  <ellipse cx="1053" cy="204" rx="380" ry="244" fill="url(#glow)"/>
+  <path d="M0 360 C140 310 245 414 417 344 S704 306 875 346 S1229 404 1440 306" fill="none" stroke="#5cf0bb" stroke-opacity=".1" stroke-width="2"/>
+  <path d="M0 386 C181 318 280 438 438 369 S744 322 911 369 S1230 428 1440 344" fill="none" stroke="#79ffd4" stroke-opacity=".11" stroke-width="1"/>
+  <g fill="none" stroke="#53e0a1" stroke-linecap="round" opacity=".24">
+    <path d="M790 122 H893 L923 151 H1012" stroke-width="2"/>
+    <path d="M766 180 H872 L913 221 H1012" stroke-width="2"/>
+    <path d="M752 258 H841 L898 297 H1015" stroke-width="2"/>
+    <path d="M788 340 H899 L922 316 H1019" stroke-width="2"/>
+    <path d="M1130 95 H1223 L1275 49 H1400"/>
+    <path d="M1130 346 H1269 L1311 385 H1420"/>
+  </g>
+  <g opacity=".7"><circle cx="921" cy="151" r="3" fill="#78ffc5"/><circle cx="898" cy="297" r="3" fill="#78ffc5"/><circle cx="1275" cy="49" r="3" fill="#78ffc5"/></g>
+  <rect x="980" y="79" width="285" height="285" rx="29" fill="#081b22" stroke="#5ff1b5" stroke-opacity=".3" stroke-width="2"/>
+  <rect x="1005" y="103" width="235" height="237" rx="19" fill="url(#board)" stroke="#62eab7" stroke-opacity=".32"/>
+  <path d="M1022 158H1223 M1022 220H1223 M1022 281H1223 M1064 120V323 M1123 120V323 M1181 120V323" fill="none" stroke="#80ffd0" opacity=".075"/>
+  <g fill="#0b3131" stroke="#50ebb1" stroke-opacity=".55">
+    <rect x="1044" y="143" width="157" height="70" rx="9"/>
+    <rect x="1044" y="233" width="157" height="70" rx="9"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#c6ffe5" text-anchor="middle">
+    <text x="1122" y="173" font-size="17" font-weight="700" letter-spacing="3">SYSTEM OS</text>
+    <text x="1122" y="196" font-size="10" letter-spacing="1.6" opacity=".8">ORIGINAL SHELL</text>
+    <text x="1122" y="261" font-size="17" font-weight="700" letter-spacing="3">GAME OS</text>
+    <text x="1122" y="284" font-size="10" letter-spacing="1.6" opacity=".8">COMPATIBILITY</text>
+  </g>
+  <g transform="translate(140 110)">
+    <rect x="0" y="0" width="90" height="6" rx="3" fill="#55f3a7"/>
+    <text x="0" y="86" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700" letter-spacing="-3" fill="#edfef8">xboxone</text>
+    <text x="0" y="161" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="300" letter-spacing="-4" fill="#53f4ab">-native</text>
+    <text x="4" y="217" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="600" letter-spacing="4" fill="#a8d8cb">ORIGINAL SYSTEM. NATIVE AMBITION.</text>
+  </g>
+  <path d="M704 0 V440" stroke="#c6ffdf" stroke-opacity=".07"/>
+  <rect x="1.5" y="1.5" width="1437" height="437" rx="21.5" fill="none" stroke="#a9f7cc" stroke-opacity=".13" stroke-width="3"/>
+</svg>
