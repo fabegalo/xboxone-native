@@ -55,4 +55,9 @@ struct Report {
 bool scan(const std::filesystem::path& root, Report& report, std::string& error,
           const Limits& limits = {});
 
+// Identity for a single manifest-referenced artifact, including non-PE assets.
+// Same streaming hash/path policy as inventory; assumes stable local inputs.
+bool fingerprint(const std::filesystem::path& path, std::string& sha256,
+                 std::string& error, std::uint64_t max_bytes = 256ULL * 1024 * 1024);
+
 } // namespace xboxone::inventory

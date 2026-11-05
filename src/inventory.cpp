@@ -107,6 +107,28 @@ void dependencies(Report& report) {
 }
 } // namespace
 
+bool fingerprint(const fs::path& path, std::string& sha256, std::string& error,
+                 std::uint64_t max_bytes) {
+    sha256.clear();
+    error.clear();
+    try {
+        if (linked_ancestor(fs::absolute(path)) || !fs::is_regular_file(path)) {
+            error = "artifact is not a regular, non-linked file";
+            return false;
+        }
+        const auto size = fs::file_size(path);
+        if (size > max_bytes) { error = "artifact byte limit exceeded"; return false; }
+        if (!hash_file(path, size, sha256)) {
+            error = "cannot hash artifact or input changed during read";
+            return false;
+        }
+        return true;
+    } catch (const fs::filesystem_error& e) {
+        error = e.what();
+        return false;
+    }
+}
+
 bool scan(const fs::path& root, Report& report, std::string& error, const Limits& limits) {
     report = {};
     error.clear();

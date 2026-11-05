@@ -78,3 +78,7 @@ python tools/systemos_preflight.py 'C:\Users\fabeg\Downloads\OSU1.zip' 'C:\Users
 ```
 
 O JSON de diagnóstico está em saída de build ignorada, sem nova cópia de evidência em documentos estáveis. Nenhum arquivo original foi removido, movido, extraído ou executado. Próximo avanço delimitado em [NEXT-TASK.md](NEXT-TASK.md).
+
+## Encerramento da infraestrutura M0 solicitada
+
+Inventário, estudo OSU1/2/3 e pré-checagem foram publicados diretamente na `main` em `7307692`, com originais e hashes preservados. O avanço executável posterior e seus bloqueios pertencem a [M1-STATUS.md](M1-STATUS.md); isso não converte a identificação M0 em boot original.

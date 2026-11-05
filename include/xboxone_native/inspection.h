@@ -18,10 +18,15 @@ struct Import {
 
 struct PeInfo {
     std::uint16_t machine = 0;
+    std::uint16_t characteristics = 0;
     std::uint16_t subsystem = 0;
     std::uint16_t sections = 0;
     std::uint64_t image_base = 0;
     std::uint32_t entry_point_rva = 0;
+    // Native bootstrap rejects contracts it cannot audit; these are not parsed
+    // into a complete activation/import graph by the M0 inspector.
+    bool has_delay_imports = false;
+    bool has_clr_header = false;
     std::vector<Import> imports;
 };
 

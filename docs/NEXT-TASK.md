@@ -1,10 +1,10 @@
-# Próxima tarefa — M0: componente SystemOS legível
+# Próxima tarefa — M1: ativação de um componente original legível
 
-Estado em **2026-11-04**: os três OSUs foram identificados por hash e separados por alvo em [M0-STATUS.md](M0-STATUS.md). Nenhum é descartável inteiro por ser exclusivamente de outro console. A dashboard original permanece sem execução; a pré-checagem informa os bloqueios reais.
+Estado em **2026-11-04**: M0 publicado em `7307692`; sessão versionada, resolvedor explícito e execução Win32 x64 supervisionada foram demonstrados com código sintético próprio em [M1-STATUS.md](M1-STATUS.md). Os OSUs e a dashboard original continuam sem execução. O bootstrap não exige nem substitui o renderer paralelo.
 
 ## Objetivo concreto
 
-Identificar **um componente de shell original do Xbox One, legível e legitimamente acessível**, com os módulos e recursos da própria revisão, e produzir seu manifesto de identidade e grafo de dependências. Não substituir a dashboard por uma interface do projeto.
+Identificar **um componente original do Xbox One já legível por acesso autorizado**, com módulos/recursos da própria revisão, preencher o manifesto implementado e estender o menor contrato realmente bloqueante até uma tentativa original verificável. O shell e a primeira imagem continuam dependentes desse insumo; não repetir a infraestrutura sintética já aprovada.
 
 ## Entradas e seleção
 
@@ -15,17 +15,17 @@ Identificar **um componente de shell original do Xbox One, legível e legitimame
 
 ## Trabalho quando a entrada estiver disponível
 
-1. Executar `inventory <raiz-do-conjunto> --json`, ajustando limites de leitura explicitamente quando necessário. Registrar procedência, revisão, caminhos e SHA-256 em um manifesto que referencie os arquivos existentes.
+1. Executar `inventory <raiz-do-conjunto> --json` e preencher o manifesto v1 de [M1-STATUS.md](M1-STATUS.md): revisão exata, identidade de fonte, origem declarada, caminho/hash/procedência por arquivo e bindings explicitamente auditados. Referenciar os originais no lugar, sem cópias; o manifesto não autentica a revisão declarada.
 2. Identificar o shell e seu modelo de pacote/ativação a partir dos arquivos efetivamente encontrados, sem presumir nomes de executável ou a geração visual da dashboard.
 3. Mapear imports normais e atrasados, exports/forwarders, contratos de API, classes WinRT, serviços NT, assets, recursos de idioma, composição e comunicação com HostOS. O parser atual de imports não certifica esses contratos completos.
-4. Classificar dependências com evidência: presente e identificado, ausente, contrato por implementar ou necessidade de isolamento a investigar. Não resolver por basename em outros OSUs, fornecer sucesso fictício ou carregar código antes da auditoria do conjunto.
-5. Escolher o menor caminho de ativação que preserve o comportamento original. Implementar e testar o contrato concreto identificado com fixtures próprias; não construir um loader/VM genérico baseado em dependências ainda desconhecidas.
+4. Usar `xboxone-systemos prepare <manifesto>` para registrar dependências ausentes ou não implementadas. O backend atual aceita só EXE Win32 console com kernel32 auditado; imports privados/atrasados, WinRT, serviços, kernel NT e dispositivos exigem trabalho específico. Não escolher outro arquivo/OSU por basename.
+5. Estender somente o contrato observado, com teste próprio. Quando kernel/dispositivo for indispensável, registrar símbolo/serviço/IOCTL e avaliar backend isolado. Só executar `run` após auditoria de ativação e dependências; saída 0 sozinha não prova inicialização original.
 
 ## Critérios de conclusão
 
 - Um conjunto legível coerente por versão, com componente de shell identificado e hashes/procedência registrados.
 - Grafo de dependências com falhas explícitas e nenhuma substituição silenciosa entre OSUs.
 - Decisão justificada para a primeira tentativa de ativação, com testes focados sobre o contrato alterado.
-- Atualização somente de `STATUS.md`, `docs/M0-STATUS.md` e deste arquivo. Primeira imagem só será registrada após observar código e recursos originais renderizando, com evidência real.
+- Atualizar `STATUS.md`, `docs/M1-STATUS.md` e este arquivo. Primeira imagem exige observar código e recursos originais renderizando, com identidade, logs e captura; rótulos de proveniência e contadores gráficos não bastam.
 
 Se a entrada legível continuar ausente, manter o bloqueio identificado em vez de repetir hashes, reexecutar suítes aprovadas, gerar cópias de firmware ou simular progresso de boot.

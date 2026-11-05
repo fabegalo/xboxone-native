@@ -40,3 +40,5 @@ if(XBOXONE_NATIVE_BUILD_TESTS)
                     $<TARGET_FILE:xboxone-native>)
     endif()
 endif()
+
+include(cmake/SystemOS.cmake)

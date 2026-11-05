@@ -1,5 +1,14 @@
 # STATUS — xboxone-native
 
+## 2026-11-04 — M1: sessão versionada e execução nativa sintética verificável
+
+- **M0 publicado na `main`: `7307692`.** Preservados OSU1/2/3, perfis, hashes e originais. OSU2 é a referência histórica inicial de investigação; OSU3 compartilha seu SystemOS, mas continua pacote independente. Versão comercial da dashboard não confirmada; revisão bruta `0x341400004723ad20` não foi promovida a versão autenticada.
+- Biblioteca independente `xboxone_systemos` e CLI `xboxone-systemos prepare|run`: manifesto por revisão, SHA-256/procedência por artefato, dependências explícitas sem fallback e diagnóstico de serviços ausentes. PE de kernel, DLL como entrada, CLR, imports atrasados/privados e contratos não auditados bloqueiam execução.
+- Backend Windows AMD64 usa o loader real (`CreateProcessW`), confere exports kernel32 explicitamente autorizados e supervisiona um processo por Job Object, com prazo e limpeza após timeout. Memória, imports e threads foram exercitados por **código sintético próprio**, sem renderer ou código Xbox.
+- **Build Release Windows x64/MSVC 19.44.35229 aprovado; sete grupos focados passaram**, incluindo inspeção/inventário, ZIP/pré-checagem e os três grupos de bootstrap. Na última revisão do bootstrap: **103 verificações estruturais, 19 nativas e 7 testes Python de CLI**, incluindo falha do loader, saída 27, timeout sem filho vivo, Unicode, hashes e versões divergentes. Symlinks/junction foram pulados por falta de privilégio. Linux/macOS/ARM64 não executados.
+- Evidência local: `build-m1/m1-bootstrap-evidence.json` registra PID real, retomada da thread, `stage=exited`, `exit_code=0`, origem sintética e **zero frames autênticos**. O componente verificou memória/proteção e uma thread real. Nenhum executável original SystemOS estava legível; não houve tentativa de executar conteúdo criptografado ou alegação de dashboard inicializada.
+- Contrato de entrega ao backend gráfico paralelo, limitações e dependências: [docs/M1-STATUS.md](docs/M1-STATUS.md). Código gráfico concorrente preservado. Próxima etapa: [docs/NEXT-TASK.md](docs/NEXT-TASK.md). Nenhuma Release publicada.
+
 ## 2026-11-04 — M0 retomado: OSUs separados por alvo e pré-checagem SystemOS
 
 - **Manter OSU1, OSU2 e OSU3.** OSU1 contém candidatos Xbox One e componentes Scarlett; OSU2/OSU3 são bases históricas do Xbox One original. Nenhum ZIP fornecido foi identificado como exclusivamente de outro console. `ScarlettHost.xvd` foi excluído da seleção SystemOS/One, sem apagar ou reempacotar o OSU1. A classificação usa o papel OSU registrado e o layout observado, não autenticação Microsoft.

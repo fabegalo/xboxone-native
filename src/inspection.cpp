@@ -137,10 +137,23 @@ bool parse_pe(Reader& file, Report& report, std::string& error) {
     }
     report.kind = Kind::pe64;
     report.pe.machine = machine;
+    report.pe.characteristics = u16(coff.data() + 22);
     report.pe.sections = nsections;
     report.pe.subsystem = u16(optional.data() + 0x44);
     report.pe.image_base = u64(optional.data() + 0x18);
     report.pe.entry_point_rva = u32(optional.data() + 0x10);
+    const auto directories = u32(optional.data() + 0x6c);
+    if (directories > (optional_size - 0x70U) / 8U) {
+        error = "data directories exceed optional header";
+        return false;
+    }
+    const auto has_directory = [&](unsigned index) {
+        return directories > index &&
+            (u32(optional.data() + 0x70 + index * 8) != 0 ||
+             u32(optional.data() + 0x74 + index * 8) != 0);
+    };
+    report.pe.has_delay_imports = has_directory(13);
+    report.pe.has_clr_header = has_directory(14);
 
     // Import Directory (data directory #1); no imports is valid.
     if (optional_size < 0x80 || u32(optional.data() + 0x6c) < 2) return true;
