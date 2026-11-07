@@ -81,7 +81,7 @@ int wmain(int argc, wchar_t** argv) {
     if (diagnose) { FreeLibrary(provider); return 0; }
     using Open = DWORD(WINAPI*)(HANDLE*);
     using Close = DWORD(WINAPI*)(HANDLE);
-    using Mount = DWORD(WINAPI*)(HANDLE*, int*, HANDLE, const wchar_t*, LONGLONG, const wchar_t*, int);
+    using Mount = DWORD(WINAPI*)(ULONG_PTR*, int*, HANDLE, const wchar_t*, LONGLONG, const wchar_t*, int);
     using Unmount = DWORD(WINAPI*)(HANDLE, const wchar_t*);
     const auto open = reinterpret_cast<Open>(GetProcAddress(provider, "XvdOpenAdapter"));
     const auto close = reinterpret_cast<Close>(GetProcAddress(provider, "XvdCloseAdapter"));
@@ -101,10 +101,10 @@ int wmain(int argc, wchar_t** argv) {
         std::cout << "drive_removed=" << (GetDriveTypeW(drive) == DRIVE_NO_ROOT_DIR) << std::endl;
         return status == 0 ? 0 : 1;
     }
-    HANDLE disk = nullptr;
+    ULONG_PTR disk_identifier = 0;
     int number = -1;
     std::cout << "mount_started=1" << std::endl;
-    const DWORD mounted = mount(&disk, &number, adapter, argv[3], 0, L"Q:", 1); // ReadOnly flag.
+    const DWORD mounted = mount(&disk_identifier, &number, adapter, argv[3], 0, L"Q:", 1); // ReadOnly flag.
     std::cout << "mount_readonly=0x" << std::hex << mounted << "; disk=" << std::dec << number << std::endl;
     DWORD detached = 0;
     bool readable = false;
@@ -117,7 +117,7 @@ int wmain(int argc, wchar_t** argv) {
         detached = unmount(adapter, argv[3]);
         std::cout << "unmount=0x" << std::hex << detached << std::endl;
     }
-    if (disk && disk != INVALID_HANDLE_VALUE) CloseHandle(disk);
+    // The returned disk identifier is not a Win32 handle; release the mount by file.
     const DWORD closed = close(adapter);
     std::cout << "close_adapter=0x" << std::hex << closed << std::endl;
     FreeLibrary(provider);
