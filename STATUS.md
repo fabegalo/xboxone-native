@@ -1,5 +1,12 @@
 # STATUS — xboxone-native
 
+## 2026-11-07 — Gaming Services: contexto correto e recusa real do XVD
+
+- Resolvida a falha de carregamento `xsapi.dll`: sua regra de execução é condicionada à identidade Gaming Services. O comando Microsoft `Invoke-CommandInDesktopPackage` permite carregar o provedor instalado sem mudar ACL, políticas ou registro de pacotes. Token administrativo sozinho não bastava.
+- Ferramentas opt-in `xboxone_xvd_mount_probe` e `tools/probe_xvd_readonly.ps1`: diagnóstico sem montagem por padrão; montagem somente leitura exige opção explícita e sessão elevada. Confere identidade/assinatura do provedor, usa `Q:` apenas se livre e registra abertura, montagem, desmontagem e remoção do volume. Nenhum código do XVD é executado.
+- Provedor instalado carregou e abriu adaptador com `S_OK`/handle válido. **As tentativas reais com `system.xvd` do OSU1 e OSU2 retornaram `0x80070570` na montagem**, sem volume remanescente. A causa dessa recusa não foi determinada; o código não comprova corrupção do ZIP ou incapacidade universal do formato. OSU3 não foi repetido por compartilhar o SystemOS verificado do OSU2.
+- Build Windows x64/MSVC Release e `xvd_probe_safety` aprovados (quatro casos, sem montagem/deployment); script analisado e caminhos reais de diagnóstico/falha exercitados. Montagem bem-sucedida/timeout de montagem permanecem não demonstrados; nenhuma CI nova, execução SystemOS ou imagem autêntica. Evidência/comando manual: [M1-STATUS.md](docs/M1-STATUS.md).
+
 ## 2026-11-07 — contrato de carregamento nativo: TLS estático
 
 - `inspect` e `xboxone-systemos prepare` agora validam o diretório TLS PE32+ e expõem template, índice, zero-fill, alinhamento e callbacks ordenados. Endereços fora da imagem, índice sem armazenamento gravável, callbacks sem código executável, tabelas truncadas e limites excedidos são recusados antes do lançamento. Mantidos os limites de metadados por perfil.

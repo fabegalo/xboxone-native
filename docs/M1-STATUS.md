@@ -2,6 +2,30 @@
 
 Data: **2026-11-04**. Estágio máximo demonstrado: um **componente sintético próprio** foi criado como processo Windows AMD64, executou código de memória/threads/imports e terminou com código 0. **Nenhum componente original do SystemOS foi carregado ou inicializado; zero frames autênticos.**
 
+## 2026-11-07 — resolução do acesso ao provedor e montagem efetivamente tentada
+
+O bloqueio anterior em `LoadLibraryExW(xsapi.dll)` foi diagnosticado: o arquivo permite leitura comum, mas sua ACE de execução exige `WIN://SYSAPPID` contendo `Microsoft.GamingServices_8wekyb3d8bbwe`. A consulta direta confirmou leitura permitida e execução negada, inclusive com token elevado, fora de AppContainer e sem restrição MicrosoftSignedOnly/StoreSignedOnly. Isso explica por que somente elevar o processo não corrigia o acesso. Não foram alterados ACL, certificados, políticas ou instalação.
+
+O comando oficial [Invoke-CommandInDesktopPackage](https://learn.microsoft.com/en-us/powershell/module/appx/invoke-commandindesktoppackage?view=windowsserver2025-ps), com o Application ID `GamingServices` conferido no manifesto instalado, executou o utilitário próprio no contexto do pacote existente. Nesse contexto, a DLL carregou. Sem elevação, `XvdOpenAdapter` retornou `0x80070005`; com contexto de pacote e token elevado, retornou `S_OK` e handle válido. O diagnóstico antigo esperava `0x10000000`, hipótese removida diante do retorno observado na versão instalada. Essa execução é do utilitário de diagnóstico e do provedor Windows; não é ativação da dashboard/SystemOS.
+
+Foram então atingidas as chamadas reais de montagem somente leitura dos `system.xvd` extraídos de OSU2 e OSU1: ambos retornaram `0x80070570`, número de disco `-1`, sem `Q:` remanescente. Não houve sistema de arquivos interno legível. O provedor não estabeleceu a causa dessa recusa; não se conclui que o ZIP esteja corrompido, pois os membros extraídos já passaram por CRC/SHA-256 contra o catálogo. Assinatura Microsoft/integridade interna dos XVDs continuam não certificadas. OSU3 não foi reensaiado por compartilhar o mesmo SystemOS verificado do OSU2. Não houve extração de chaves, descriptografia, modificação dos XVDs ou execução de conteúdo Xbox.
+
+Ferramentas reproduzíveis: target Windows x64/MSVC `xboxone_xvd_mount_probe` e `tools/probe_xvd_readonly.ps1`. O script verifica o pacote exato instalado, assinatura da DLL e Application ID, rejeita caminhos ligados/traversal, usa logs únicos em `build-xvd-probes` e prazo de observação de 30 segundos. O modo padrão somente diagnostica o carregamento. `-MountReadOnly` exige PowerShell x64 elevado; o utilitário recusa outro contexto de pacote e `Q:` ocupada, solicita somente ReadOnly e desmonta após a leitura limitada da raiz. O supervisor solicita limpeza do arquivo da tentativa se ela exceder o prazo, e mantém falha explícita se não conseguir verificar a limpeza. Os caminhos positivos e de timeout/limpeza após timeout não foram exercitados: não são certificados pela falha limpa observada. APIs privadas do provedor não têm garantia geral de ABI para outras versões.
+
+Build MSVC 19.44.35207/SDK 10.0.26100 Release aprovado; `xvd_probe_safety` aprovou quatro casos de recusa sem abrir adaptador/montar conteúdo. A sintaxe PowerShell foi analisada. O comando reproduzível passou pelo diagnóstico com provedor carregado e pelo caso real OSU2: abertura `S_OK`, montagem `0x80070570`, fechamento do adaptador `S_OK`, `drive_removed=1` e código final 1, preservando a falha. Evidência local: `build-appmodel/formal-xvd-mount.log` e logs sob `build-xvd-probes`; o ensaio OSU1 está em `build-appmodel/task-xvd-package-mount-osu1-elevated.log`. Não houve repetição das suítes não afetadas, CI nova ou prova de boot.
+
+Comandos para reprodução, a partir da raiz do checkout com ambiente MSVC configurado; somente a execução com `-MountReadOnly` requer Windows PowerShell x64 elevado e autorização para essa operação no host:
+
+```powershell
+cmake --build build-appmodel --config Release --target xboxone_xvd_mount_probe
+$taskImage = Join-Path $PWD 'build-osu\OSU2\$SystemUpdate\system.xvd'
+$taskProbe = Join-Path $PWD 'build-appmodel\xboxone_xvd_mount_probe.exe'
+.\tools\probe_xvd_readonly.ps1 -ImagePath $taskImage -ProbePath $taskProbe
+.\tools\probe_xvd_readonly.ps1 -ImagePath $taskImage -ProbePath $taskProbe -MountReadOnly
+```
+
+O comando reproduz o diagnóstico; ele não instala o sistema nem inicia a dashboard. Não repetir a mesma montagem no mesmo ambiente esperando boot sem nova evidência. O bloqueio atual fica na recusa real do provedor ou no acesso a um conjunto original já legível e coerente; a permissão de carregamento da DLL deixou de ser o bloqueio.
+
 ## 2026-11-07 — validação e prova de TLS no loader nativo
 
 Aplicação delimitada do conceito do Azimuth: preservar a inicialização real do código original exige conferir mais que imports e ponto de entrada. O leitor anterior registrava somente a presença do diretório TLS. Agora `PeInfo::tls`, serializado pela função compartilhada de `inspect` e `prepare`, contém RVA/tamanho do template, índice, zero-fill, alinhamento e callbacks na ordem declarada. Ausência produz `tls: null`; não há cópia dos bytes do template no relatório.

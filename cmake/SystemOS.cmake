@@ -18,6 +18,15 @@ endif()
 add_executable(xboxone-systemos ${PROJECT_SOURCE_DIR}/src/bootstrap_main.cpp)
 target_link_libraries(xboxone-systemos PRIVATE xboxone_systemos)
 
+if(WIN32 AND MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
+   CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
+    add_executable(xboxone_xvd_mount_probe WIN32 ${PROJECT_SOURCE_DIR}/tools/xvd_mount_probe.cpp)
+    target_compile_features(xboxone_xvd_mount_probe PRIVATE cxx_std_20)
+    target_compile_options(xboxone_xvd_mount_probe PRIVATE /W4 /permissive-)
+    target_link_libraries(xboxone_xvd_mount_probe PRIVATE advapi32)
+    target_link_options(xboxone_xvd_mount_probe PRIVATE /ENTRY:wmainCRTStartup)
+endif()
+
 if(XBOXONE_NATIVE_BUILD_TESTS)
     add_executable(xboxone_appmodel_path_tests ${PROJECT_SOURCE_DIR}/tests/appmodel_path_tests.cpp)
     target_link_libraries(xboxone_appmodel_path_tests PRIVATE xboxone_systemos)
@@ -38,6 +47,12 @@ if(XBOXONE_NATIVE_BUILD_TESTS)
     endif()
     if(WIN32 AND MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
        CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
+        if(Python3_Interpreter_FOUND)
+            add_test(NAME xvd_probe_safety
+                COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/xvd_probe_tests.py"
+                        $<TARGET_FILE:xboxone_xvd_mount_probe>)
+            set_tests_properties(xvd_probe_safety PROPERTIES TIMEOUT 10 LABELS "windows;no-mount;no-deployment")
+        endif()
         add_executable(xboxone_appmodel_activation_tests ${PROJECT_SOURCE_DIR}/tests/appmodel_activation_tests.cpp)
         target_include_directories(xboxone_appmodel_activation_tests PRIVATE ${PROJECT_SOURCE_DIR}/src)
         target_link_libraries(xboxone_appmodel_activation_tests PRIVATE xboxone_systemos)
