@@ -1,5 +1,7 @@
 # Próxima tarefa — M1: ativação de um componente original legível
 
+Base de caminhos atualizada em **2026-11-07**: leitura, inventário e preparação aceitam caminhos longos Unicode sem mover os arquivos. O lançamento próprio com caminho de executável acima de 260 caracteres passou; diretório de trabalho muito longo continua recusado neste host pelo Windows, com diagnóstico explícito. Ao avaliar um componente original, conferir também as operações de arquivo do convidado; a leitura pelo host não certifica esse contrato. Evidência em [M1-STATUS.md](M1-STATUS.md). As pendências de ativação/insumo abaixo permanecem.
+
 ## Pendência imediata — concluir a prova AppModel M1.2
 
 Contratos Appx/grafo e backend Windows estão implementados; **a ativação positiva ainda não foi demonstrada**. O host não dispõe de Windows Sandbox/guest descartável e o runner recusou registrar pacotes na instalação do usuário. Falha real de `ActivateApplication` (`0x80073CF1`) e leitura de manifesto não cumprem o segundo modelo de execução. Evidência e comando opt-in em [M1-STATUS.md](M1-STATUS.md).

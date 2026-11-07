@@ -1,5 +1,12 @@
 # STATUS — xboxone-native
 
+## 2026-11-07 — base de I/O: caminhos longos sem mover conteúdo
+
+- Corrigida falha reproduzida do inventário Windows em caminho de 336 caracteres. Inspeção, fingerprint, manifesto de sessão e leitura Appx compartilham a conversão interna para caminhos estendidos; preservados hashes, limites, isolamento e inspeção dos ancestrais antes de normalizar `link/..`.
+- Fixtures próprias validam leitura/inventário/preparação com diretórios Unicode acima de 380 caracteres, aliases ordinário/estendido do mesmo arquivo e hashes inválidos. Lançamento nativo de executável com caminho total acima de 260 caracteres passou quando o diretório de trabalho é aceito pelo Windows. Diretório de trabalho muito longo continua recusado por `CreateProcessW` neste host (`267`), agora com diagnóstico específico e sem mudança silenciosa de pasta.
+- Build Windows x64/MSVC Release (`/O2 /Ob2 /DNDEBUG`) e **10 grupos CTest afetados aprovados**. Cobertura de symlinks/reparse points não pôde ser exercitada por falta de privilégio local; CI desta alteração e outros hosts não executados. Detalhes: [M1-STATUS.md](docs/M1-STATUS.md).
+- Trabalho gráfico preexistente preservado. Nenhum original modificado, pacote registrado, ganho de FPS medido ou componente Xbox executado. Dashboard e jogos continuam dependentes de insumos originais legíveis e dos contratos de runtime ainda ausentes.
+
 ## 2026-11-05 — M1.2: contratos AppModel e backend de ativação Windows
 
 - `xboxone_systemos` distingue Win32 e AppModel. Leitura de `AppxManifest.xml` pelo Windows SDK, snapshot <=1 MiB conferido por SHA-256, XML sem DTD/resolver externo; identidade, Application ID, EntryPoint/AUMID, dependências e capacidades entram no grafo com revisão/procedência. Bindings explícitos; ambiguidades, versões, caminhos e contratos desconhecidos bloqueiam execução.

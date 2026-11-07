@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -61,6 +62,30 @@ class AppModel(unittest.TestCase):
         self.assertEqual(p["capabilities"][0]["name"], "runFullTrust")
         self.assertEqual(r["activation_events"], [])
         self.assertTrue(any(d["kind"] == "appx_resource" and d["status"] == "pinned_resource_verified" for d in r["dependencies"]))
+
+    def test_deep_package_path_without_deployment(self):
+        owned = Path("\\\\?\\" + str(self.root)) / "long-package-fixture"
+        deep = owned
+        while len(str(deep)) < 380:
+            deep /= "pacote_próprio_测试_" + "x" * 32
+        try:
+            layout(deep)
+            p = profile(deep)
+            # Read fixture bytes with an extended path, then pin ordinary paths.
+            text = p.read_text(encoding="utf-8").replace("//?/", "")
+            p.write_text(text, encoding="utf-8")
+            result = subprocess.run([str(CLI), "prepare", str(p)[4:]], capture_output=True,
+                                    encoding="utf-8", timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            r = json.loads(result.stdout)
+            self.assertEqual(r["stage"], "prepared")
+            self.assertEqual(len(r["packages"]), 1)
+            self.assertEqual(r["process_id"], 0)
+            self.assertEqual(r["activation_events"], [])
+            self.assertEqual(p.read_text(encoding="utf-8"), text)
+        finally:
+            if owned.exists():
+                shutil.rmtree(owned)
 
     def test_xml_security_and_structure(self):
         original = self.manifest.read_text(encoding="utf-8")

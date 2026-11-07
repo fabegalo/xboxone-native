@@ -72,7 +72,7 @@ if(XBOXONE_NATIVE_BUILD_TESTS)
             add_test(NAME bootstrap_cli_regressions
                 COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/bootstrap_cli_tests.py"
                         $<TARGET_FILE:xboxone-systemos> $<TARGET_FILE:bootstrap_component_ok>
-                        "${CMAKE_CURRENT_BINARY_DIR}/m1-bootstrap-evidence.json")
+                        "${CMAKE_CURRENT_BINARY_DIR}/m1-bootstrap-evidence.json" $<TARGET_FILE:xboxone-native>)
             set_tests_properties(bootstrap_cli_regressions PROPERTIES TIMEOUT 20)
         endif()
     endif()

@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 
-CLI, COMPONENT, EVIDENCE = map(lambda s: Path(s).resolve(), sys.argv[1:4])
+CLI, COMPONENT, EVIDENCE, INSPECTOR = map(lambda s: Path(s).resolve(), sys.argv[1:5])
 del sys.argv[1:]
 
 
@@ -35,8 +35,85 @@ class BootstrapCLI(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def run_cli(self, *args):
-        return subprocess.run([str(CLI), *map(str, args)], capture_output=True, encoding="utf-8", timeout=10)
+    def run_cli(self, *args, **kwargs):
+        return subprocess.run([str(CLI), *map(str, args)], capture_output=True, encoding="utf-8", timeout=10, **kwargs)
+
+    def test_deep_unicode_content_path(self):
+        # Explicit spelling lets the fixture work without host long-path policy.
+        owned = Path("\\\\?\\" + str(self.root.resolve())) / "long-path-fixture"
+        deep = owned
+        while len(str(deep)) < 380:
+            deep /= "biblioteca_própria_测试_" + "x" * 32
+        try:
+            deep.mkdir(parents=True)
+            component = deep / "component.exe"
+            shutil.copyfile(COMPONENT, component)
+            ordinary = Path(str(component)[4:])
+            path = deep / "profile.txt"
+            text = manifest(component).replace(quote(component.as_posix()), quote(ordinary.as_posix()))
+            path.write_text(text, encoding="utf-8")
+            before = component.read_bytes()
+            for spelling in (ordinary, component):
+                with self.subTest(path=spelling):
+                    inspect = subprocess.run([str(INSPECTOR), "inspect", str(spelling), "--json"],
+                                             capture_output=True, encoding="utf-8", timeout=10)
+                    self.assertEqual(inspect.returncode, 0, inspect.stderr)
+                    self.assertEqual(json.loads(inspect.stdout)["kind"], "pe64")
+                    inventory = subprocess.run([str(INSPECTOR), "inventory", str(spelling.parent), "--json"],
+                                               capture_output=True, encoding="utf-8", timeout=10)
+                    self.assertEqual(inventory.returncode, 0, inventory.stderr)
+                    files = json.loads(inventory.stdout)["files"]
+                    self.assertEqual(len(files), 1)
+                    self.assertEqual(files[0]["sha256"], hashlib.sha256(before).hexdigest())
+            ordinary_profile = Path(str(path)[4:])
+            for contents in (text, manifest(component)):
+                path.write_text(contents, encoding="utf-8")
+                for spelling in (ordinary_profile, path, ordinary_profile.relative_to(self.root.resolve())):
+                    with self.subTest(manifest=spelling, extended_artifact=contents != text):
+                        run = self.run_cli("prepare", spelling, cwd=self.root)
+                        self.assertEqual(run.returncode, 0, run.stderr + run.stdout)
+                        report = json.loads(run.stdout)
+                        self.assertEqual(report["stage"], "prepared")
+                        self.assertEqual(report["authentic_frames_observed"], 0)
+            path.write_text(text, encoding="utf-8")
+            run = self.run_cli("run", ordinary_profile)
+            report = json.loads(run.stdout)
+            if run.returncode:
+                self.assertEqual(report["stage"], "failed")
+                self.assertEqual(report["process_id"], 0)
+                self.assertTrue(any(d["code"] == "native_execution_failed" and
+                                    "long working directory" in d["detail"] and "win32=267" in d["detail"]
+                                    for d in report["diagnostics"]), report)
+            else:
+                self.assertEqual(report["stage"], "exited")
+                self.assertEqual(report["exit_code"], 0)
+            duplicate = next(line for line in manifest(component).splitlines() if line.startswith("artifact "))
+            path.write_text(text + duplicate.replace('"entry"', '"alias"', 1) + "\n", encoding="utf-8")
+            rejected = self.run_cli("prepare", ordinary_profile)
+            self.assertEqual(rejected.returncode, 1, rejected.stderr)
+            self.assertIn("ambiguous_path", [d["code"] for d in json.loads(rejected.stdout)["diagnostics"]])
+            path.write_text(text.replace(hashlib.sha256(before).hexdigest(), "0" * 64), encoding="utf-8")
+            rejected = self.run_cli("run", ordinary_profile)
+            self.assertEqual(rejected.returncode, 1, rejected.stderr)
+            self.assertEqual(json.loads(rejected.stdout)["process_id"], 0)
+            self.assertIn("hash_mismatch", [d["code"] for d in json.loads(rejected.stdout)["diagnostics"]])
+            self.assertEqual(component.read_bytes(), before)
+        finally:
+            if owned.exists():
+                shutil.rmtree(owned)
+
+    def test_long_executable_name_runs_in_pinned_directory(self):
+        ordinary = self.root.resolve() / ("component_" + "x" * (270 - len(str(self.root.resolve()))) + ".exe")
+        extended = Path("\\\\?\\" + str(ordinary))
+        shutil.copyfile(COMPONENT, extended)
+        try:
+            text = manifest(extended).replace(quote(extended.as_posix()), quote(ordinary.as_posix()))
+            self.profile.write_text(text, encoding="utf-8")
+            result = self.run_cli("run", self.profile)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertEqual(json.loads(result.stdout)["stage"], "exited")
+        finally:
+            extended.unlink()
 
     def test_run_and_record_owned_execution(self):
         result = self.run_cli("run", self.profile, "5000")

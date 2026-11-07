@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "xboxone_native/inventory.h"
 #include "sha256.h"
+#include "file_path.h"
 
 #include <chrono>
 #include <cstdlib>
@@ -128,6 +129,13 @@ int main() {
         std::string digest;
         check(!xboxone::inventory::fingerprint(root / "escape" / ".." / "z.exe", digest, error) && error.find("linked") != std::string::npos,
               "fingerprint rejects symlink ancestor before dot-dot normalization");
+#ifdef _WIN32
+        const auto extended = xboxone::detail::file_path(root);
+        check(!xboxone::inventory::scan(extended / "escape" / "..", report, error),
+              "extended root rejects symlink before dot-dot normalization");
+        check(!xboxone::inventory::fingerprint(extended / "escape" / ".." / "z.exe", digest, error),
+              "extended fingerprint rejects symlink before dot-dot normalization");
+#endif
         fs::remove(root / "escape");
     } else {
         check(!std::getenv("XBOXONE_REQUIRE_SYMLINKS"), "CI requires directory symlink coverage: " + ec.message());

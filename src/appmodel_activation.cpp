@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "appmodel_internal.h"
 #include "appmodel_windows.h"
+#include "file_path.h"
 #include "xboxone_native/inventory.h"
 #include <algorithm>
 #include <stdexcept>
@@ -72,11 +73,11 @@ bool run_appmodel(const Profile& profile, Report& report, std::uint32_t timeout_
         if (rc != ERROR_SUCCESS) return fail("package_registration_unavailable", "package path query failed");
         installed.resize(length - 1);
         std::error_code ec;
-        if (!std::filesystem::equivalent(installed, source->path.parent_path(), ec) || ec)
+        if (!std::filesystem::equivalent(detail::file_path(installed), detail::file_path(source->path.parent_path()), ec) || ec)
             return fail("registered_package_path_mismatch", "registered exact identity does not reference the pinned input root");
         // Prevent entry replacement while broker/loader opens it. Stable package
         // ancestors remain a precondition; this is not a hostile-FS snapshot.
-        Handle input{CreateFileW(entry->path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+        Handle input{CreateFileW(detail::file_path(entry->path).c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
         std::string hash, error;
         if (input.value == INVALID_HANDLE_VALUE || !inventory::fingerprint(entry->path, hash, error) || hash != entry->sha256)
             return fail("package_entry_changed", "entry lock/hash verification failed: " + error);
@@ -115,7 +116,7 @@ bool run_appmodel(const Profile& profile, Report& report, std::uint32_t timeout_
         }
         wchar_t image[32768]{}; DWORD count = 32768;
         if (!QueryFullProcessImageNameW(process.value, 0, image, &count) ||
-            !std::filesystem::equivalent(std::filesystem::path(image), entry->path, ec) || ec) {
+            !std::filesystem::equivalent(detail::file_path(image), detail::file_path(entry->path), ec) || ec) {
             SetEvent(stop.value);
             return fail("activated_process_path_mismatch", "returned PID executable differs from pinned entry");
         }

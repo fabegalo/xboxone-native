@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "xboxone_native/inventory.h"
 #include "sha256.h"
+#include "file_path.h"
 
 #include <algorithm>
 #include <array>
@@ -32,7 +33,7 @@ std::string fold(std::string value) {
 bool link_or_reparse(const fs::path& path) {
     // symlink_status alone does not cover every kind of Windows reparse point.
 #ifdef _WIN32
-    const auto attrs = GetFileAttributesW(path.c_str());
+    const auto attrs = GetFileAttributesW(detail::file_path(path).c_str());
     if (attrs == INVALID_FILE_ATTRIBUTES)
         throw fs::filesystem_error("cannot read file attributes", path,
                                   std::error_code(static_cast<int>(GetLastError()), std::system_category()));
@@ -43,10 +44,19 @@ bool link_or_reparse(const fs::path& path) {
 }
 
 bool linked_ancestor(const fs::path& path) {
+    auto supplied = path;
+#ifdef _WIN32
+    // std::filesystem splits the extended prefix before the drive/share root.
+    // Inspect the original components, including link/.., in ordinary spelling.
+    const auto value = supplied.make_preferred().native();
+    if (value.starts_with(L"\\\\?\\UNC\\")) supplied = L"\\\\" + value.substr(8);
+    else if (value.starts_with(L"\\\\?\\") && value.size() >= 7 && value[5] == L':' && value[6] == L'\\')
+        supplied = value.substr(4);
+#endif
     fs::path current;
-    for (const auto& component : path) {
+    for (const auto& component : supplied) {
         current /= component;
-        if (current == path.root_name()) continue;
+        if (current == supplied.root_name()) continue;
         if (link_or_reparse(current)) return true;
     }
     return false;
@@ -68,7 +78,7 @@ bool approved(const fs::path& path) {
 }
 
 bool hash_file(const fs::path& path, std::uint64_t expected_size, std::string& digest) {
-    std::ifstream input(path, std::ios::binary);
+    std::ifstream input(detail::file_path(path), std::ios::binary);
     if (!input) return false;
     detail::Sha256 hash;
     std::array<std::uint8_t, 65536> buffer{};
@@ -122,11 +132,11 @@ bool fingerprint(const fs::path& path, std::string& sha256, std::string& error,
     sha256.clear();
     error.clear();
     try {
-        if (linked_ancestor(supplied_absolute(path)) || !fs::is_regular_file(path)) {
+        if (linked_ancestor(supplied_absolute(path)) || !fs::is_regular_file(detail::file_path(path))) {
             error = "artifact is not a regular, non-linked file";
             return false;
         }
-        const auto size = fs::file_size(path);
+        const auto size = fs::file_size(detail::file_path(path));
         if (size > max_bytes) { error = "artifact byte limit exceeded"; return false; }
         if (!hash_file(path, size, sha256)) {
             error = "cannot hash artifact or input changed during read";
@@ -145,7 +155,7 @@ bool scan(const fs::path& root, Report& report, std::string& error, const Limits
     try {
         const auto supplied = supplied_absolute(root);
         if (linked_ancestor(supplied)) { error = "inventory root contains a symlink or reparse point"; return false; }
-        const auto absolute = fs::canonical(supplied);
+        const auto absolute = detail::file_path(fs::canonical(detail::file_path(supplied)));
         if (!fs::is_directory(absolute)) { error = "inventory root is not a directory"; return false; }
         std::vector<fs::path> candidates;
         std::set<std::string> path_keys;

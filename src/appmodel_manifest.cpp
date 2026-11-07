@@ -2,6 +2,7 @@
 #include "xboxone_native/appmodel.h"
 #include "xboxone_native/inventory.h"
 #include "sha256.h"
+#include "file_path.h"
 #include "appmodel_windows.h"
 #include <algorithm>
 #include <fstream>
@@ -131,7 +132,7 @@ bool read_manifest(const std::filesystem::path& path, const std::string& sha256,
         std::string hash;
         if (!inventory::fingerprint(path, hash, error, 1024 * 1024) || hash != sha256)
             throw std::runtime_error("manifest path/hash rejected: " + error);
-        std::ifstream input(path, std::ios::binary);
+        std::ifstream input(detail::file_path(path), std::ios::binary);
         std::vector<std::uint8_t> bytes(1024 * 1024 + 1);
         input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
         const auto size = input.gcount();

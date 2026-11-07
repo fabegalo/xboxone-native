@@ -3,6 +3,7 @@
 #include "xboxone_native/inspection.h"
 #include "xboxone_native/inventory.h"
 #include "appmodel_internal.h"
+#include "file_path.h"
 
 #include <algorithm>
 #include <fstream>
@@ -126,11 +127,11 @@ bool read_profile(const fs::path& path, Profile& profile, std::string& error) {
     profile = {};
     error.clear();
     std::error_code ec;
-    if (fs::file_size(path, ec) > 1024 * 1024 || ec) {
+    if (fs::file_size(detail::file_path(path), ec) > 1024 * 1024 || ec) {
         error = "manifest inaccessible or exceeds 1 MiB";
         return false;
     }
-    std::ifstream input(path);
+    std::ifstream input(detail::file_path(path));
     std::string line;
     bool header = false, identity = false, entry = false;
     std::size_t number = 0, bytes = 0;
@@ -245,7 +246,7 @@ bool Session::prepare(const Profile& profile) {
             continue;
         }
         std::error_code ec;
-        const auto size = fs::file_size(a.path, ec);
+        const auto size = fs::file_size(detail::file_path(a.path), ec);
         if (ec || size > 1024ULL * 1024 * 1024 - total_bytes) {
             block(report_, "artifact_unreadable_or_total_limit", a.id, "input inaccessible or manifest exceeds 1 GiB");
             continue;
@@ -256,10 +257,10 @@ bool Session::prepare(const Profile& profile) {
             block(report_, "artifact_unreadable", a.id, error);
             continue;
         }
-        const auto canonical = fs::canonical(a.path, ec);
+        const auto canonical = fs::canonical(detail::file_path(a.path), ec);
         const bool duplicate = !ec && std::any_of(paths.begin(), paths.end(), [&](const auto& previous) {
             std::error_code same_error;
-            return fs::equivalent(previous, canonical, same_error) && !same_error;
+            return fs::equivalent(detail::file_path(previous), detail::file_path(canonical), same_error) && !same_error;
         });
         if (ec || duplicate)
             block(report_, "ambiguous_path", a.id, "same artifact referenced more than once or canonical path unavailable");
@@ -499,22 +500,26 @@ bool Session::run(std::uint32_t timeout_ms) {
     if (!SetInformationJobObject(job.value, JobObjectExtendedLimitInformation, &limits, sizeof(limits)))
         return fail(win_error("SetInformationJobObject"));
     // Pin the entry against write/delete during the loader's open and run.
-    Handle input(CreateFileW(entry->path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+    const auto executable = detail::file_path(entry->path);
+    Handle input(CreateFileW(executable.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
     if (input.value == INVALID_HANDLE_VALUE) return fail(win_error("CreateFileW"));
     // Recheck after acquiring the deny-write handle; path checks assume stable ancestors.
     std::string hash, error;
     if (!inventory::fingerprint(entry->path, hash, error) || hash != entry->sha256)
         return fail("entry changed before locked launch: " + error);
-    std::wstring command = L"\"" + entry->path.wstring() + L"\"";
+    std::wstring command = L"\"" + executable.wstring() + L"\"";
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
     PROCESS_INFORMATION process{};
     // Explicit application path, no shell, no inherited handles, no visible window.
-    if (!CreateProcessW(entry->path.c_str(), command.data(), nullptr, nullptr, FALSE,
-                        CREATE_SUSPENDED | CREATE_NO_WINDOW, nullptr, entry->path.parent_path().c_str(),
-                        &startup, &process))
+    if (!CreateProcessW(executable.c_str(), command.data(), nullptr, nullptr, FALSE,
+                        CREATE_SUSPENDED | CREATE_NO_WINDOW, nullptr, executable.parent_path().c_str(),
+                        &startup, &process)) {
+        if (GetLastError() == ERROR_DIRECTORY && entry->path.parent_path().native().size() >= MAX_PATH)
+            return fail("CreateProcessW rejected the long working directory; input remains in place and no alternate directory was selected; win32=267");
         return fail(win_error("CreateProcessW"));
+    }
     Handle child(process.hProcess), thread(process.hThread);
     report_.stage = Stage::process_created;
     report_.process_id = process.dwProcessId;

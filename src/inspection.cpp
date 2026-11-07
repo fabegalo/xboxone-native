@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "xboxone_native/inspection.h"
+#include "file_path.h"
 
 #include <algorithm>
 #include <array>
@@ -30,7 +31,7 @@ std::uint64_t u64(const std::uint8_t* p) {
 
 class Reader {
 public:
-    explicit Reader(const std::filesystem::path& path) : file_(path, std::ios::binary | std::ios::ate) {
+    explicit Reader(const std::filesystem::path& path) : file_(detail::file_path(path), std::ios::binary | std::ios::ate) {
         if (file_) {
             const auto end = file_.tellg();
             if (end >= 0) {
