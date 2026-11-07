@@ -1,5 +1,12 @@
 # STATUS — xboxone-native
 
+## 2026-11-07 — contrato de carregamento nativo: TLS estático
+
+- `inspect` e `xboxone-systemos prepare` agora validam o diretório TLS PE32+ e expõem template, índice, zero-fill, alinhamento e callbacks ordenados. Endereços fora da imagem, índice sem armazenamento gravável, callbacks sem código executável, tabelas truncadas e limites excedidos são recusados antes do lançamento. Mantidos os limites de metadados por perfil.
+- Fixture própria, sem CRT, passou pelo CLI de produção: inicialização TLS/callback antes da entrada, dados independentes em duas threads, callbacks de criação/encerramento e reinicialização em dois processos. O Windows continua responsável pelo loader; nenhum loader PE alternativo ou API Xbox fictícia foi introduzido.
+- Windows x64/MSVC Release: **10 grupos CTest afetados aprovados**, incluindo 21 testes Python de PE/grafo e 10 de CLI. Symlinks locais continuam indisponíveis por privilégio; CI nova/outros hosts não executados. Evidência e limites: [M1-STATUS.md](docs/M1-STATUS.md).
+- Após solicitação explícita do mantenedor, os ZIPs foram extraídos em pastas separadas `build-osu/OSU1`, `build-osu/OSU2` e `build-osu/OSU3`, ignoradas pelo Git: 62 XVDs, 10443231232 bytes, CRC e SHA-256 dos membros conferidos contra o catálogo anterior. ZIPs em Downloads preservados; não foram refeitos seus hashes integrais. OSU2/3 permanecem conjuntos históricos One; componentes One/Series do OSU1 não são misturados entre perfis. Nenhum conteúdo interno descriptografado, componente executado, pacote registrado ou frame autêntico produzido. **Dashboard e jogos continuam sem execução demonstrada**.
+
 ## 2026-11-07 — base de I/O: caminhos longos sem mover conteúdo
 
 - Corrigida falha reproduzida do inventário Windows em caminho de 336 caracteres. Inspeção, fingerprint, manifesto de sessão e leitura Appx compartilham a conversão interna para caminhos estendidos; preservados hashes, limites, isolamento e inspeção dos ancestrais antes de normalizar `link/..`.

@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 
-CLI, COMPONENT, EVIDENCE, INSPECTOR = map(lambda s: Path(s).resolve(), sys.argv[1:5])
+CLI, COMPONENT, EVIDENCE, INSPECTOR, TLS_COMPONENT = map(lambda s: Path(s).resolve(), sys.argv[1:6])
 del sys.argv[1:]
 
 
@@ -138,6 +138,26 @@ class BootstrapCLI(unittest.TestCase):
         self.assertEqual(report["stage"], "prepared")
         self.assertEqual(report["process_id"], 0)
         self.assertIsNone(report["exit_code"])
+
+    def test_native_static_tls_lifecycle(self):
+        self.profile.write_text(manifest(TLS_COMPONENT), encoding="utf-8")
+        prepared = self.run_cli("prepare", self.profile)
+        self.assertEqual(prepared.returncode, 0, prepared.stderr + prepared.stdout)
+        report = json.loads(prepared.stdout)
+        tls = report["nodes"][0]["pe"]["tls"]
+        self.assertGreater(tls["template_size"], 0)
+        self.assertGreater(tls["index_rva"], 0)
+        self.assertEqual(len(tls["callback_rvas"]), 1)
+        self.assertEqual(report["process_id"], 0)
+        for _ in range(2):  # Each fresh process must recreate TLS state.
+            run = self.run_cli("run", self.profile)
+            self.assertEqual(run.returncode, 0, run.stderr + run.stdout)
+            report = json.loads(run.stdout)
+            self.assertEqual(report["stage"], "exited")
+            self.assertEqual(report["exit_code"], 0)
+            self.assertTrue(report["primary_thread_resumed"])
+            self.assertFalse(report["dashboard_boot_verified"])
+            self.assertEqual(report["authentic_frames_observed"], 0)
 
     def test_hash_mismatch_is_blocked(self):
         text = manifest(COMPONENT).replace(hashlib.sha256(COMPONENT.read_bytes()).hexdigest(), "0" * 64)

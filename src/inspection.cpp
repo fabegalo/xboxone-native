@@ -76,6 +76,7 @@ struct Section {
     std::uint32_t virtual_size;
     std::uint32_t raw_offset;
     std::uint32_t raw_size;
+    std::uint32_t characteristics;
 };
 
 class PeReader {
@@ -187,7 +188,7 @@ bool parse_pe(Reader& file, Report& report, std::string& error) {
             return false;
         }
         sections.push_back({u32(sec.data() + 12), u32(sec.data() + 8),
-                            u32(sec.data() + 20), u32(sec.data() + 16)});
+                            u32(sec.data() + 20), u32(sec.data() + 16), u32(sec.data() + 36)});
     }
     report.kind = Kind::pe64;
     report.pe.machine = machine;
@@ -234,6 +235,57 @@ bool parse_pe(Reader& file, Report& report, std::string& error) {
     for (unsigned index : {9U, 14U}) {
         const auto [rva, size] = directory(index);
         if (rva) report.pe.activation_metadata.push_back({index == 9 ? "tls_directory" : "clr_directory", {}, rva, size, 0, {}});
+    }
+    const auto [tls_rva, tls_size] = directory(9);
+    if (tls_rva) {
+        std::array<std::uint8_t, 40> data{};
+        if (tls_size < data.size() || !view.read(tls_rva, data)) return fail("truncated PE32+ TLS directory");
+        const auto to_rva = [&](std::uint64_t va) -> std::optional<std::uint32_t> {
+            if (va < report.pe.image_base || va - report.pe.image_base > UINT32_MAX) return std::nullopt;
+            return static_cast<std::uint32_t>(va - report.pe.image_base);
+        };
+        const auto section_range = [&](std::uint32_t rva, std::uint32_t count, std::uint32_t permission) {
+            return std::any_of(sections.begin(), sections.end(), [&](const auto& s) {
+                const auto extent = std::max(s.virtual_size, s.raw_size);
+                return (s.characteristics & permission) && rva >= s.virtual_address &&
+                    rva - s.virtual_address < extent && count <= extent - (rva - s.virtual_address);
+            });
+        };
+        TlsInfo tls;
+        const auto start = u64(data.data()), end = u64(data.data() + 8);
+        if (end < start || (start == 0) != (end == 0) || end - start > UINT32_MAX)
+            return fail("invalid TLS template VA range");
+        if (start) {
+            const auto rva = to_rva(start);
+            if (!rva || (end != start && !view.locate(*rva, end - start))) return fail("unbacked TLS template");
+            tls.template_rva = *rva;
+            tls.template_size = static_cast<std::uint32_t>(end - start);
+        }
+        const auto index = to_rva(u64(data.data() + 16));
+        if (!index || !section_range(*index, 4, 0x80000000U)) return fail("TLS index must address writable image storage");
+        tls.index_rva = *index;
+        tls.zero_fill_size = u32(data.data() + 32);
+        const auto alignment = (u32(data.data() + 36) >> 20) & 15;
+        if (alignment == 15) return fail("invalid TLS alignment");
+        tls.alignment_bytes = alignment ? 1U << (alignment - 1) : 0;
+        const auto callbacks = u64(data.data() + 24);
+        if (callbacks) {
+            const auto table = to_rva(callbacks);
+            if (!table) return fail("invalid TLS callback table VA");
+            tls.callbacks_rva = *table;
+            for (std::uint32_t i = 0; ; ++i) {
+                std::array<std::uint8_t, 8> entry{};
+                if (i == 1024 || !view.read(static_cast<std::uint64_t>(*table) + i * 8ULL, entry))
+                    return fail("unterminated or oversized TLS callback table");
+                const auto va = u64(entry.data());
+                if (!va) break;
+                const auto target = to_rva(va);
+                if (!target || !view.locate(*target, 1) || !section_range(*target, 1, 0x20000000U))
+                    return fail("TLS callback must address executable image data");
+                tls.callback_rvas.push_back(*target);
+            }
+        }
+        report.pe.tls = std::move(tls);
     }
     std::size_t symbol_count = 0;
     const auto thunks = [&](Import& imported, std::uint64_t table, std::uint64_t iat, bool va) {
@@ -458,7 +510,20 @@ void write_pe_json_fields(std::ostream& out, const PeInfo& p) {
         out << ",\"rva\":" << m.rva << ",\"size\":" << m.size << ",\"code_page\":" << m.code_page << ",\"bytes_hex\":";
         quote(m.bytes_hex); out << '}';
     }
-    out << ']';
+    out << "],\"tls\":";
+    if (!p.tls) out << "null";
+    else {
+        const auto& t = *p.tls;
+        out << "{\"template_rva\":" << t.template_rva << ",\"template_size\":" << t.template_size
+            << ",\"index_rva\":" << t.index_rva << ",\"callbacks_rva\":" << t.callbacks_rva
+            << ",\"zero_fill_size\":" << t.zero_fill_size << ",\"alignment_bytes\":" << t.alignment_bytes
+            << ",\"callback_rvas\":[";
+        for (std::size_t i = 0; i < t.callback_rvas.size(); ++i) {
+            if (i) out << ',';
+            out << t.callback_rvas[i];
+        }
+        out << "]}";
+    }
 }
 
 bool inspect_xvd_prefix(std::span<const std::uint8_t> prefix, std::uint64_t declared_file_size,

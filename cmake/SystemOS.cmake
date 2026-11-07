@@ -64,6 +64,11 @@ if(XBOXONE_NATIVE_BUILD_TESTS)
         endforeach()
         target_compile_definitions(bootstrap_component_hang PRIVATE BOOTSTRAP_TEST_HANG)
         target_compile_definitions(bootstrap_component_fail PRIVATE BOOTSTRAP_TEST_FAIL)
+        add_executable(bootstrap_component_tls ${PROJECT_SOURCE_DIR}/tests/bootstrap_tls_component.cpp)
+        target_compile_options(bootstrap_component_tls PRIVATE /GS- /Zl)
+        target_link_libraries(bootstrap_component_tls PRIVATE kernel32)
+        target_link_options(bootstrap_component_tls PRIVATE /NODEFAULTLIB /ENTRY:bootstrap_tls_entry
+                            /SUBSYSTEM:CONSOLE /MANIFEST:NO /INCREMENTAL:NO /INCLUDE:_tls_used)
         add_test(NAME bootstrap_native_execution COMMAND xboxone_bootstrap_tests
                  $<TARGET_FILE:bootstrap_component_ok> $<TARGET_FILE:bootstrap_component_hang>
                  $<TARGET_FILE:bootstrap_component_fail>)
@@ -72,7 +77,8 @@ if(XBOXONE_NATIVE_BUILD_TESTS)
             add_test(NAME bootstrap_cli_regressions
                 COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/bootstrap_cli_tests.py"
                         $<TARGET_FILE:xboxone-systemos> $<TARGET_FILE:bootstrap_component_ok>
-                        "${CMAKE_CURRENT_BINARY_DIR}/m1-bootstrap-evidence.json" $<TARGET_FILE:xboxone-native>)
+                        "${CMAKE_CURRENT_BINARY_DIR}/m1-bootstrap-evidence.json" $<TARGET_FILE:xboxone-native>
+                        $<TARGET_FILE:bootstrap_component_tls>)
             set_tests_properties(bootstrap_cli_regressions PROPERTIES TIMEOUT 20)
         endif()
     endif()

@@ -286,6 +286,7 @@ bool Session::prepare(const Profile& profile) {
             continue;
         }
         std::size_t records = image.pe.exports.size(), bytes = 0;
+        if (image.pe.tls) records += image.pe.tls->callback_rvas.size();
         for (const auto& i : image.pe.imports) records += i.functions.size();
         for (const auto& e : image.pe.exports) records += e.names.size();
         for (const auto& m : image.pe.activation_metadata) bytes += m.bytes_hex.size() / 2;

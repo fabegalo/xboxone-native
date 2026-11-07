@@ -90,6 +90,17 @@ def quote(value):
     return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"') + '"'
 
 
+def tls_image():
+    b = image()
+    put(b, 0x150, rva(0x1a00)); put(b, 0x154, 40)
+    put(b, 0x1ac, 0xe0000040)  # Writable index and executable callback fixture section.
+    for at, offset in ((0x1a00, 0x1a80), (0x1a08, 0x1a90), (0x1a10, 0x1aa0), (0x1a18, 0x1ac0)):
+        put(b, at, 0x140000000 + rva(offset), 8)
+    put(b, 0x1a20, 32); put(b, 0x1a24, 4 << 20)  # 8-byte alignment.
+    put(b, 0x1ac0, 0x140000000 + rva(0x1f00), 8)
+    return b
+
+
 class Dependencies(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="xboxone_pe_graph_")
@@ -168,7 +179,10 @@ class Dependencies(unittest.TestCase):
     def test_available_activation_metadata(self):
         payload = b'<assembly><assemblyIdentity name="own" version="1.0.0.0"/></assembly>'
         b = image(manifest=payload)
-        put(b, 0x150, rva(0x1a00)); put(b, 0x154, 40)  # TLS directory.
+        tls = tls_image()
+        b[0x1a00:0x1b00] = tls[0x1a00:0x1b00]
+        put(b, 0x150, rva(0x1a00)); put(b, 0x154, 40)
+        put(b, 0x1ac, 0xe0000040)
         put(b, 0x178, rva(0x1b00)); put(b, 0x17c, 72)  # CLR directory presence only.
         p = self.inspect(b)
         self.assertEqual([m["kind"] for m in p["activation_metadata"]], ["tls_directory", "clr_directory", "rt_manifest"])
@@ -176,6 +190,58 @@ class Dependencies(unittest.TestCase):
         self.assertEqual(bytes.fromhex(m["bytes_hex"]), payload)
         self.assertEqual(m["resource_path"], ["#24", "#1", "#1033"])
         self.assertEqual(m["code_page"], 65001)
+
+    def test_tls_metadata_and_callback_order(self):
+        b = tls_image()
+        put(b, 0x1ac8, 0x140000000 + rva(0x1f10), 8)
+        p = self.inspect(b)
+        self.assertEqual(p["tls"], {"template_rva": rva(0x1a80), "template_size": 16,
+                                  "index_rva": rva(0x1aa0), "callbacks_rva": rva(0x1ac0),
+                                  "zero_fill_size": 32, "alignment_bytes": 8,
+                                  "callback_rvas": [rva(0x1f00), rva(0x1f10)]})
+        self.assertIsNone(self.inspect(image())["tls"])
+
+    def test_tls_empty_template_and_bss_index(self):
+        b = tls_image()
+        put(b, 0x1a00, 0, 8); put(b, 0x1a08, 0, 8); put(b, 0x1a18, 0, 8)
+        put(b, 0x190, 0x2200)  # Extend virtual storage beyond file-backed bytes.
+        put(b, 0x1a10, 0x140004000, 8)
+        p = self.inspect(b)
+        self.assertEqual(p["tls"]["template_size"], 0)
+        self.assertEqual(p["tls"]["index_rva"], 0x4000)
+        self.assertEqual(p["tls"]["callback_rvas"], [])
+
+    def test_malformed_tls_rejected_before_execution(self):
+        mutations = ((0x154, 39, 4), (0x1a00, 0x13fffffff, 8),
+                     (0x1a08, 0x140000001, 8), (0x1a08, 0, 8),
+                     (0x1a08, 0x240000000, 8), (0x1a10, 0, 8),
+                     (0x1a10, 0x140003fff, 8), (0x1a18, 0x140003fff, 8),
+                     (0x1ac0, 0x140004000, 8), (0x1ac0, 0x13fffffff, 8),
+                     (0x1a24, 15 << 20, 4), (0x1ac, 0x60000040, 4))
+        for at, value, size in mutations:
+            with self.subTest(at=at, value=value):
+                b = tls_image(); put(b, at, value, size)
+                self.assertIn("TLS", self.inspect(b, valid=False))
+                report = self.prepare({"entry": b}, [])
+                self.assertIn("image_invalid", [d["code"] for d in report["diagnostics"]])
+        b = tls_image(); put(b, 0x1ac, 0xc0000040)  # Callback storage is not executable.
+        self.assertIn("TLS callback", self.inspect(b, valid=False))
+
+    def test_tls_unterminated_callback_table(self):
+        b = tls_image()
+        for at in range(0x1ac0, 0x2000, 8):
+            put(b, at, 0x140000000 + rva(0x1f00), 8)
+        self.assertIn("unterminated", self.inspect(b, valid=False))
+
+    def test_tls_callback_limit_includes_terminator(self):
+        b = tls_image()
+        b.extend(bytes(0x2000))
+        put(b, 0x190, len(b) - 0x200); put(b, 0x198, len(b) - 0x200)
+        for at in range(0x1ac0, 0x1ac0 + 1023 * 8, 8):
+            put(b, at, 0x140000000 + rva(0x1f00), 8)
+        self.assertEqual(len(self.inspect(b)["tls"]["callback_rvas"]), 1023)
+        put(b, 0x1ac0 + 1023 * 8, 0x140000000 + rva(0x1f00), 8)
+        self.assertIn("oversized TLS callback", self.inspect(b, valid=False))
 
     def test_malformed_tables(self):
         cases = [

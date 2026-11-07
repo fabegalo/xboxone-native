@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iosfwd>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -39,6 +40,16 @@ struct ActivationMetadata {
     std::string bytes_hex; // Exact bounded resource bytes; no XML/CLR activation.
 };
 
+struct TlsInfo {
+    std::uint32_t template_rva = 0;
+    std::uint32_t template_size = 0;
+    std::uint32_t index_rva = 0;
+    std::uint32_t callbacks_rva = 0;
+    std::uint32_t zero_fill_size = 0;
+    std::uint32_t alignment_bytes = 0; // Zero selects the loader's default.
+    std::vector<std::uint32_t> callback_rvas; // In loader invocation order.
+};
+
 struct PeInfo {
     std::uint16_t machine = 0;
     std::uint16_t characteristics = 0;
@@ -51,6 +62,7 @@ struct PeInfo {
     std::vector<Import> imports;
     std::vector<Export> exports;
     std::vector<ActivationMetadata> activation_metadata;
+    std::optional<TlsInfo> tls;
 };
 
 bool is_api_set(std::string_view library);
