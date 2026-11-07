@@ -1,0 +1,86 @@
+[
+  {
+    "path": "XvdTool.Streaming/ConsoleLogger.cs",
+    "git_blob_sha1": "387791211c2dc776c66d430a8ae35f025786bae1"
+  },
+  {
+    "path": "XvdTool.Streaming/Extensions.cs",
+    "git_blob_sha1": "48b0584f6b5471bc6f95303a1590c33282533bec"
+  },
+  {
+    "path": "XvdTool.Streaming/HttpFileStream.cs",
+    "git_blob_sha1": "3957d4db856c2372ae90e8aabf23ed49d95f8f5a"
+  },
+  {
+    "path": "XvdTool.Streaming/KeyManager.cs",
+    "git_blob_sha1": "e22f32136825041aba3ace84c9cdad1c85f2c8d8"
+  },
+  {
+    "path": "XvdTool.Streaming/Program.cs",
+    "git_blob_sha1": "67f1bd2f7ab0fe0343ef91a506672a131486a008"
+  },
+  {
+    "path": "XvdTool.Streaming/StreamedXvdFile.LocalImpl.cs",
+    "git_blob_sha1": "4161d1a329eb652907f1a41a52eb5c29ee2ff469"
+  },
+  {
+    "path": "XvdTool.Streaming/StreamedXvdFile.cs",
+    "git_blob_sha1": "2132320f35e482dffe70b701e4d4c0fa345cabeb"
+  },
+  {
+    "path": "XvdTool.Streaming/StreamedXvdFileSystemStream.cs",
+    "git_blob_sha1": "32e8a938130590b491507eeeb84fe9fdaa59baf8"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/CryptoCommand.cs",
+    "git_blob_sha1": "29db082cf4b03212754bc117d3735ccfefe5d97f"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/CryptoCommandSettings.cs",
+    "git_blob_sha1": "6a99a0f336ce5210c4ae63073f2f837fe27597cb"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/DecryptCommand.cs",
+    "git_blob_sha1": "090f6cbcea219c77970b4441dd5e5a7ff4db19f4"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/ExtractCommand.cs",
+    "git_blob_sha1": "6827ef58c54b0cf5bd5b5ae6f44743b95de3ee31"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/ExtractEmbeddedXvdCommand.cs",
+    "git_blob_sha1": "7851a18db71fb248f9e016563e041a4735227e50"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/InfoCommand.cs",
+    "git_blob_sha1": "07456164e5b17fe6ebb1be145d643c2405c0c1ce"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/VerifyCommand.cs",
+    "git_blob_sha1": "1b15dbd519de4dc63681b45d08cc778ac8e0b7ab"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/XvdCommand.cs",
+    "git_blob_sha1": "dd8547d53381f7a7d904100dcab7aa320ff8dc85"
+  },
+  {
+    "path": "XvdTool.Streaming/Commands/XvdCommandSettings.cs",
+    "git_blob_sha1": "5f2526ffb0423cf491dcf8402fa2a835395bbbe1"
+  },
+  {
+    "path": "XvdTool.Streaming/Crypto/AesCoreNi.cs",
+    "git_blob_sha1": "a756ea49160e605b4ad631e27b5740a789775810"
+  },
+  {
+    "path": "XvdTool.Streaming/Crypto/AesXtsCipherNi.cs",
+    "git_blob_sha1": "f059d180ab5ef7d8f380afb93a466b7cf4473913"
+  },
+  {
+    "path": "XvdTool.Streaming/Crypto/AesXtsDecryptorNi.cs",
+    "git_blob_sha1": "a78e8ea27e4395da1303216e9291ec58a3b48417"
+  },
+  {
+    "path": "XvdTool.Streaming/Crypto/Buffer16.cs",
+    "git_blob_sha1": "d6d8c585ed722f70e4fb3693e27c69013696dd31"
+  }
+]

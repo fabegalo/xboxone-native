@@ -1,0 +1,15 @@
+--- a/XvdTool.Streaming/Program.cs
++++ b/XvdTool.Streaming/Program.cs
+@@ -8 +8 @@
+-    static void Main(string[] args)
++    static int Main(string[] args)
+@@ -41 +41,2 @@
+-        app.Run(args);
++        var result = app.Run(args);
++        return result < 0 ? 1 : result;
+--- a/XvdTool.Streaming/Commands/ExtractCommand.cs
++++ b/XvdTool.Streaming/Commands/ExtractCommand.cs
+@@ -33,0 +34,3 @@
++        if (settings.XvcPath != null && SystemOsExtractor.Handles(settings.XvcPath))
++            return SystemOsExtractor.Extract(settings.XvcPath, settings.OutputDirectory ?? "output");
++

@@ -1,0 +1,6 @@
+This isolated tool adaptation uses LukeFZ/XvdTool.Streaming v1.2.1,
+commit 2fbf765aa6f8a3ecceee03be0de64a92bc06c569, under GPL-2.0.
+Upstream: https://github.com/LukeFZ/XvdTool.Streaming
+The Xbox One compatibility runtime remains BSD-3-Clause and does not link this tool.
+The added extraction path accepts readable, unencrypted SystemOS disk containers.
+It does not obtain keys, decrypt protected OSUs, or execute console components.
